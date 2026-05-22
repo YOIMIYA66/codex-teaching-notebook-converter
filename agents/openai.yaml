@@ -1,0 +1,4 @@
+interface:
+  display_name: "Teaching Notebook Converter"
+  short_description: "Codex-only teaching notebook workflow."
+  default_prompt: "Convert this engineering notebook into a polished teaching notebook with imagegen visuals, inline HTML cards, narrative explanations, validation gates, and final notebook QA."
