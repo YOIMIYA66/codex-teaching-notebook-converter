@@ -18,7 +18,7 @@ Codex 专用 skill：将工程化 Jupyter Notebook 转换成图文并茂、结�
 
 - 保留原工程 notebook 的可运行逻辑
 - 创建 `*.teaching.ipynb` 教学副本
-- 使用 `imagegen` 生成教学插图
+- 使用 `imagegen` 直接生成带文字的教学信息图
 - 顶部添加 16:9 横版宣传海报
 - 正文使用白底浅色教学流程图
 - 用 Markdown + inline HTML 卡片美化说明区
@@ -29,8 +29,22 @@ Codex 专用 skill：将工程化 Jupyter Notebook 转换成图文并茂、结�
 
 - 首屏：深色科技风 16:9 宣传海报，用来抓住主题和成果。
 - 正文：白底或浅蓝底 16:9 教学图，更适合 notebook 阅读。
+- 默认图片策略：优先让 `imagegen` 直接生成包含文字的最终图，不再默认采用“先生成背景图，再本地合成文字”的做法。
+- 文字准确性：把必须出现的中文标题、步骤、参数和警告语直接写进 imagegen prompt；如果文字错误或过小，减少文字量后重试。
 - 卡片：使用 inline `<div style="...">`，避免依赖全局 `<style>`。
 - 图数量：通常 1 张首屏海报 + 3 到 5 张正文教学图即可。
+
+推荐 imagegen prompt 思路：
+
+```text
+Use case: scientific-educational. Asset type: 16:9 Chinese text infographic for a Jupyter teaching notebook.
+Use exact Chinese text, large readable typography, no extra text.
+Title: <准确标题>
+Cards/steps: <准确短文本>
+Visual style: light blue-white academic slide, navy headings, cyan accents, amber warning accents, no logos, no watermark.
+```
+
+首屏海报可以使用深色高冲击视觉；后续教学图建议使用浅色背景，便于在 notebook 正文阅读、截图和打印。
 
 ## 为什么用 `<div style="...">` 做卡片
 

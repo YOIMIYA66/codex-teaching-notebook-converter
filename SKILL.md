@@ -1,6 +1,6 @@
 ---
 name: teaching-notebook-converter
-description: Convert engineering Jupyter notebooks into polished Codex-only teaching notebooks. Use when Codex needs to turn a runnable or engineering-focused .ipynb into a tutorial notebook with narrative structure, imagegen-generated visuals, inline HTML card layouts, learner-friendly explanations, validation gates, and final notebook QA.
+description: Convert engineering Jupyter notebooks into polished Codex-only teaching notebooks. Use when Codex needs to turn a runnable or engineering-focused .ipynb into a tutorial notebook with narrative structure, imagegen-generated text infographics, inline HTML card layouts, learner-friendly explanations, validation gates, and final notebook QA.
 ---
 
 # Teaching Notebook Converter
@@ -34,6 +34,8 @@ Preserve the engineering notebook's executable path. Add teaching value through 
 4. Use imagegen for bitmap teaching visuals.
    - Use a dark, high-impact poster only for the first screen.
    - Use light-background visuals for body sections so they blend with notebook pages.
+   - Prefer imagegen to generate the final teaching image with the required text already inside the image. Do not default to a "generate blank background, then locally composite all text" workflow.
+   - Use local text overlay only as a repair fallback when imagegen text is materially wrong, too small, misspelled, or when exact tabular text must be deterministic.
    - Generate visuals for concepts that are hard to explain in text: architecture, LoRA principle, data flow, validation gate, export pipeline, and deliverables.
    - Copy generated images from the Codex generated-images directory into a project asset folder such as `artifacts/teaching_assets/`.
    - For cloud portability, embed important images as notebook attachments when practical; also keep project-local PNG copies for reuse.
@@ -66,11 +68,19 @@ Preserve the engineering notebook's executable path. Add teaching value through 
 
 Use this visual hierarchy:
 
-- **Hero poster:** 16:9, dark or premium visual, project title, pipeline, outcomes, product list.
-- **Body diagrams:** 16:9, white or light-blue background, one concept per image.
+- **Hero poster:** 16:9, dark or premium visual, focused on the notebook's true technical subject. It may be more dramatic and promotional than the rest of the notebook.
+- **Body diagrams:** 16:9, white or light-blue background, one concept per image, optimized for reading in a notebook and screenshots.
 - **Cards:** inline HTML, small blocks, one idea per card.
 - **Tables:** metrics, file paths, parameters, comparisons.
 - **Code blocks:** exact commands, schemas, prompt templates, expected output format.
+
+Default imagegen policy:
+
+- Generate text-bearing infographics directly with imagegen when the user asks for teaching images, process charts, parameter cards, comparison panels, or overview posters.
+- Put exact required text in the prompt. Use short text blocks, large typography, and "no extra text" constraints.
+- For multilingual or Chinese text, inspect whether the generated words are accurate enough before inserting the asset. If text quality is poor, regenerate once with fewer words and larger labels.
+- Keep a project copy of every accepted imagegen output under `artifacts/teaching_assets/`; never reference only the default Codex generated-images path.
+- Prefer dark hero + light body images: dark first screen for project identity, light diagrams later for readability.
 
 Suggested teaching images:
 
@@ -78,8 +88,30 @@ Suggested teaching images:
 - Why this framework / dataset / model
 - End-to-end workflow
 - LoRA principle
+- Parameter-setting infographic
+- Technical selection infographic
 - Inference validation and export gate
 - Deliverables map
+
+Imagegen prompt patterns:
+
+```text
+Use case: scientific-educational. Asset type: 16:9 Chinese text infographic for a Jupyter teaching notebook.
+Use exact Chinese text, large readable typography, no extra text.
+Title: <exact title>
+Cards/steps: <exact short labels and bullet text>
+Visual style: light blue-white academic slide, navy headings, cyan accents, amber warning accents, no logos, no watermark.
+```
+
+For a hero:
+
+```text
+Use case: scientific-educational. Asset type: 16:9 Chinese teaching notebook hero cover with exact large text.
+Main focus: <technical subject, not the downstream demo>.
+Exact title text: <title>
+Visual composition: dark navy premium engineering poster, model architecture, pipeline, checkpoint artifacts.
+No extra text, no logos, no watermark.
+```
 
 ## Inline Card Pattern
 
