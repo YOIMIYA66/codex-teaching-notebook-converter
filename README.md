@@ -18,9 +18,11 @@ Codex 专用 skill：将工程化 Jupyter Notebook 转换成图文并茂、结�
 
 - 保留原工程 notebook 的可运行逻辑
 - 创建 `*.teaching.ipynb` 教学副本
-- 使用 `imagegen` 直接生成带文字的教学信息图
-- 顶部添加 16:9 横版宣传海报
-- 正文使用白底浅色教学流程图
+- 使用 `imagegen` 直接生成带文字、可直接插入 notebook 的教学信息图
+- 强制规划并生成 6 到 9 张图片，默认目标为 8 张
+- 顶部添加 16:9 横版封面图，清楚展示项目特色、技术路线、亮点和成果
+- 正文使用白底浅色原理图、流程图、架构图、参数图、质量门禁图和交付物图
+- 为每张图写出完整 imagegen prompt、页面必须包含的文字、技术名和数字约束、负向约束
 - 用 Markdown + inline HTML 卡片美化说明区
 - 增加项目定位、课程路线图、成果卡、质量门禁、交付清单
 - 校验 notebook JSON、Python 代码单元和 HTML 预览
@@ -31,17 +33,23 @@ Codex 专用 skill：将工程化 Jupyter Notebook 转换成图文并茂、结�
 - 正文：白底或浅蓝底 16:9 教学图，更适合 notebook 阅读。
 - 默认图片策略：优先让 `imagegen` 直接生成包含文字的最终图，不再默认采用“先生成背景图，再本地合成文字”的做法。
 - 文字准确性：把必须出现的中文标题、步骤、参数和警告语直接写进 imagegen prompt；如果文字错误或过小，减少文字量后重试。
+- 数量要求：完整教学 notebook 必须规划 6 到 9 张可用图片；4 张图片视为不足，除非用户明确要求减少。
+- 必选类型：封面图、核心原理图、数据流程图；根据 notebook 内容再补充架构图、技术选型图、参数/实验图、质量门禁图、交付物图。
+- 逐页 prompt：每张图都必须写清页面必须包含的文字、完整 prompt、技术名和数字约束、负向约束、输出文件名和插入位置。
+- 禁止留空：prompt 中不要要求留白、占位、后期补字、伪截图或让 imagegen 自行补全数字。
 - 卡片：使用 inline `<div style="...">`，避免依赖全局 `<style>`。
-- 图数量：通常 1 张首屏海报 + 3 到 5 张正文教学图即可。
+- 图数量：通常 1 张首屏封面 + 5 到 8 张正文教学图。
 
 推荐 imagegen prompt 思路：
 
 ```text
 Use case: scientific-educational. Asset type: 16:9 Chinese text infographic for a Jupyter teaching notebook.
-Use exact Chinese text, large readable typography, no extra text.
+Create the final usable image directly. Use exact Chinese text, large readable typography, no extra text.
 Title: <准确标题>
 Cards/steps: <准确短文本>
+Technical facts and numbers that must not change: <准确技术名、参数、指标、文件名或路径>
 Visual style: light blue-white academic slide, navy headings, cyan accents, amber warning accents, no logos, no watermark.
+Negative constraints: no gibberish, no misspellings, no fake screenshots, no blank placeholders, no invented metrics, no lorem ipsum.
 ```
 
 首屏海报可以使用深色高冲击视觉；后续教学图建议使用浅色背景，便于在 notebook 正文阅读、截图和打印。
@@ -115,10 +123,11 @@ git pull
 
 1. 先读取原 notebook，识别数据、训练、推理、导出、交付阶段。
 2. 创建教学副本，保留原工程逻辑。
-3. 生成首屏海报、正文流程图、关键概念图。
-4. 加入教学讲解、路线图、成果卡和风险提示。
-5. 使用 inline HTML 卡片增强可读性。
-6. 校验 JSON、代码单元、图片引用和 HTML 预览。
+3. 先写 6 到 9 张图片的视觉计划和逐页 imagegen prompt 包。
+4. 生成首屏封面、核心原理图、数据流程图、架构图、技术选型图、参数/实验图、质量门禁图和交付物图。
+5. 加入教学讲解、路线图、成果卡和风险提示。
+6. 使用 inline HTML 卡片增强可读性。
+7. 校验 JSON、代码单元、图片引用、图片文字准确性和 HTML 预览。
 
 ## Codex 专用说明
 
