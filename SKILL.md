@@ -1,6 +1,6 @@
 ---
 name: teaching-notebook-converter
-description: Convert engineering Jupyter notebooks into polished Codex-only teaching notebooks. Use when Codex needs to turn a runnable or engineering-focused .ipynb into a tutorial notebook with narrative structure, 6-9 direct imagegen-generated text infographics, complete per-image prompts, inline HTML card layouts, learner-friendly explanations, validation gates, and final notebook QA.
+description: Convert engineering Jupyter notebooks into polished Codex-only teaching notebooks with required direct imagegen-generated visual assets. Use when Codex needs to turn a runnable or engineering-focused .ipynb into a tutorial notebook with narrative structure, 6-9 imagegen infographics, prompt packs, inline HTML cards, explanations, validation gates, and final notebook QA.
 ---
 
 # Teaching Notebook Converter
@@ -10,6 +10,17 @@ This is a Codex-only workflow for converting an engineering notebook into a visu
 ## Core Rule
 
 Preserve the engineering notebook's executable path. Add teaching value through Markdown, images, inline HTML cards, visual summaries, and validation cells. Do not rewrite training or inference logic unless the user explicitly asks for a functional change.
+
+## Imagegen Mandatory Rule
+
+For a full teaching notebook conversion, `imagegen` is the required primary path for teaching visuals.
+
+- Use the built-in `image_gen` tool to generate the final bitmap visual directly for cover, principle, data flow, architecture, technical selection, parameter/experiment, quality gate, and deliverables images.
+- Do not replace required teaching visuals with locally drawn PIL images, SVG diagrams, HTML/CSS/canvas graphics, Mermaid diagrams, screenshots of slides, or blank backgrounds with later local composition.
+- Local deterministic generation is allowed only for non-teaching support artifacts such as contact sheets, thumbnails, image indexes, release copies, or validation previews.
+- Local text overlay is allowed only as a documented repair fallback after an imagegen output has been generated and inspected. It must fix small text defects; it must not become the main method for creating the visual.
+- If `image_gen` is unavailable, fails repeatedly, or cannot satisfy exact text constraints after reasonable regeneration, stop and report the blocker. Do not silently substitute a deterministic local drawing workflow.
+- Every final teaching visual referenced by the notebook must come from an accepted imagegen output copied into the project asset folder, not only from the default Codex generated-images location.
 
 ## Workflow
 
@@ -35,6 +46,7 @@ Preserve the engineering notebook's executable path. Add teaching value through 
    - Target 8 images by default. Generate no fewer than 6 usable images unless the user explicitly asks for fewer or the notebook is too small to justify 6.
    - Generate up to 9 images when the notebook has enough distinct stages, technical choices, evaluation results, or delivery artifacts.
    - Treat 4 images as insufficient for a full teaching conversion.
+   - This plan is mandatory for full teaching conversions. Do not skip it and do not substitute deterministic local diagrams for the planned imagegen visuals.
    - Include these required image types when applicable:
      - **Cover / hero:** show the project identity, core technical route, standout features, final deliverables, and why the project is worth studying.
      - **Principle diagram:** explain the central technical principle, such as LoRA, RAG, model fine-tuning, graph retrieval, validation, or export logic.
@@ -56,16 +68,19 @@ Preserve the engineering notebook's executable path. Add teaching value through 
    - Do not write schema-only or meta prompts that still require the user to fill in details.
    - Do not ask imagegen to leave blank areas for later text, screenshots, charts, signatures, QR codes, or manual composition.
    - Do not let imagegen complete missing data. If a metric, title, number, or technology name is unknown, inspect source artifacts or mark the issue before generation.
+   - Save the prompt pack as a project artifact, for example `artifacts/teaching_imagegen_prompts.json`, before generating or finalizing images.
 
 6. Use imagegen for direct-use bitmap teaching visuals.
+   - Call the built-in `image_gen` tool for every planned teaching image. For distinct visuals, use one call per image rather than one generic batch prompt.
    - Use a dark, high-impact poster only for the first screen.
    - Use light-background visuals for body sections so they blend with notebook pages.
    - Require imagegen to generate the final usable image with the required text already inside the image.
    - Do not default to a "generate blank background, then locally composite all text" workflow.
-   - Use local text overlay only as a repair fallback when imagegen text is materially wrong, too small, misspelled, or when exact tabular text must be deterministic.
+   - Use local text overlay only as a repair fallback when imagegen text is materially wrong, too small, misspelled, or when exact tabular text must be deterministic. Record that fallback in the prompt pack or validation report.
    - Generate visuals for concepts that are hard to explain in text: architecture, LoRA principle, data flow, validation gate, export pipeline, and deliverables.
    - Copy generated images from the Codex generated-images directory into a project asset folder such as `artifacts/teaching_assets/`.
    - For cloud portability, embed important images as notebook attachments when practical; also keep project-local PNG copies for reuse.
+   - After copying, update notebook references to project-local imagegen assets and verify no referenced visual remains only under the Codex generated-images directory.
 
 7. Add inline HTML cards for scanability.
    - Prefer inline `style="..."` attributes because many cloud notebooks strip or ignore global `<style>` blocks.
@@ -101,14 +116,15 @@ Use this visual hierarchy:
 - **Tables:** metrics, file paths, parameters, comparisons.
 - **Code blocks:** exact commands, schemas, prompt templates, expected output format.
 
-Default imagegen policy:
+Mandatory imagegen policy:
 
-- Generate 6-9 text-bearing infographics directly with imagegen when the user asks for teaching images, process charts, parameter cards, comparison panels, or overview posters.
+- Generate 6-9 text-bearing infographics directly with imagegen for full teaching notebook conversions.
 - Put exact required text in the prompt. Use short text blocks, large typography, and "no extra text" constraints.
 - Prefer direct-output images: the accepted PNG should be usable in the notebook immediately, without later blank filling or manual text composition.
 - For multilingual or Chinese text, inspect whether the generated words are accurate enough before inserting the asset. If text quality is poor, regenerate once with fewer words and larger labels.
 - Keep a project copy of every accepted imagegen output under `artifacts/teaching_assets/`; never reference only the default Codex generated-images path.
 - Prefer dark hero + light body images: dark first screen for project identity, light diagrams later for readability.
+- Do not use PIL/SVG/HTML/CSS/canvas as the main visual generation path for the listed teaching images. Those tools may only support validation, previews, contact sheets, file copying, or minor repair fallback.
 
 Suggested teaching images:
 
@@ -217,8 +233,10 @@ Before finishing, verify:
 - The first screen communicates the project purpose visually.
 - The image plan contains 6-9 images, or a documented user/source constraint explains why fewer were used.
 - Cover, principle diagram, and data flow diagram are present when the source notebook supports them.
+- Each planned teaching visual was generated with `image_gen`, copied into a project asset folder, and referenced from the notebook.
 - Every image/page has required text, a complete imagegen prompt, technical/numeric constraints, negative constraints, output filename, and insertion point.
 - Accepted images are direct-use outputs without blank placeholders or missing text regions.
+- Any local overlay or deterministic post-processing is documented as repair/support only, not as the primary visual generation method.
 - The notebook has a clear route map.
 - Each major code stage has a teaching explanation.
 - Metrics and final outcomes are visible near the top.
