@@ -1,4 +1,4 @@
 interface:
   display_name: "Teaching Notebook Converter"
-  short_description: "Codex-only teaching notebook workflow."
-  default_prompt: "Convert this engineering notebook into a polished teaching notebook with 6-9 direct-use imagegen text infographics, complete per-image prompts, inline HTML cards, narrative explanations, validation gates, and final notebook QA."
+  short_description: "Turn existing notebooks into validated visual lessons."
+  default_prompt: "Convert this existing engineering notebook into a teaching copy. Preserve its executable workflow, select an appropriate quick, standard, or full mode, use imagegen for final direct-use text-bearing teaching visuals, add narrative guidance and inline HTML cards, and produce inspection, manifest, prompt-pack, and validation artifacts."

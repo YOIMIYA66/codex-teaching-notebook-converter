@@ -19,13 +19,27 @@ Codex 专用 skill：将工程化 Jupyter Notebook 转换成图文并茂、结�
 - 保留原工程 notebook 的可运行逻辑
 - 创建 `*.teaching.ipynb` 教学副本
 - 使用 `imagegen` 直接生成带文字、可直接插入 notebook 的教学信息图
-- 强制规划并生成 6 到 9 张图片，默认目标为 8 张
+- 根据任务规模选择 quick、standard 或 full 模式；完整模式规划 6 到 9 张图片，默认目标为 8 张
 - 顶部添加 16:9 横版封面图，清楚展示项目特色、技术路线、亮点和成果
 - 正文使用白底浅色原理图、流程图、架构图、参数图、质量门禁图和交付物图
 - 为每张图写出完整 imagegen prompt、页面必须包含的文字、技术名和数字约束、负向约束
 - 用 Markdown + inline HTML 卡片美化说明区
 - 增加项目定位、课程路线图、成果卡、质量门禁、交付清单
 - 校验 notebook JSON、Python 代码单元和 HTML 预览
+- 提供标准库检查与验证脚本，识别 magics、shell cells、缺失资源、重复 cell ID 和代码变更
+- 生成 inspection、manifest、prompt pack 和 validation report，便于追踪转换过程
+
+## 转换模式
+
+skill 会优先选择满足任务的最小模式，用户明确指定时以用户要求为准：
+
+| 模式 | 典型规模 | 图片数量 | 适用目标 |
+| --- | --- | ---: | --- |
+| `quick` | 少于 10 个代码单元或只改造局部章节 | 0-2 | 补充导航、解释和少量视觉支持 |
+| `standard` | 10-30 个代码单元或多个工程阶段 | 3-5 | 完整教学叙事、关键图解和交付说明 |
+| `full` | 大型、多阶段或明确要求展示级成品 | 6-9 | 完整视觉系统，默认目标 8 张 |
+
+图片数量不是凑数指标。每张图必须承担不同的教学任务；完整模式继续坚持由 `imagegen` 直接生成带有大量精确文字的最终图片。
 
 ## 推荐视觉规范
 
@@ -33,7 +47,7 @@ Codex 专用 skill：将工程化 Jupyter Notebook 转换成图文并茂、结�
 - 正文：白底或浅蓝底 16:9 教学图，更适合 notebook 阅读。
 - 默认图片策略：优先让 `imagegen` 直接生成包含文字的最终图，不再默认采用“先生成背景图，再本地合成文字”的做法。
 - 文字准确性：把必须出现的中文标题、步骤、参数和警告语直接写进 imagegen prompt；如果文字错误或过小，减少文字量后重试。
-- 数量要求：完整教学 notebook 必须规划 6 到 9 张可用图片；4 张图片视为不足，除非用户明确要求减少。
+- 数量要求：完整模式必须规划 6 到 9 张可用图片；quick 和 standard 模式按 notebook 规模减少图片数量。
 - 必选类型：封面图、核心原理图、数据流程图；根据 notebook 内容再补充架构图、技术选型图、参数/实验图、质量门禁图、交付物图。
 - 逐页 prompt：每张图都必须写清页面必须包含的文字、完整 prompt、技术名和数字约束、负向约束、输出文件名和插入位置。
 - 禁止留空：prompt 中不要要求留白、占位、后期补字、伪截图或让 imagegen 自行补全数字。
@@ -119,15 +133,60 @@ git pull
 把 xxx.ipynb 转成教学版 notebook，要求用 imagegen 生成首屏横版海报和流程图，并用卡片式 Markdown 美化。
 ```
 
+也可以明确指定模式：
+
+```text
+使用 teaching-notebook-converter 的 full 模式改造 xxx.ipynb，保留原始执行逻辑，并生成完整验证报告。
+```
+
+## 辅助脚本
+
+只读检查 notebook：
+
+```powershell
+python .\scripts\inspect_notebook.py .\source.ipynb --output .\artifacts\notebook_inspection.json
+```
+
+静态验证教学 notebook：
+
+```powershell
+python .\scripts\validate_notebook.py .\source.teaching.ipynb `
+  --source .\source.ipynb `
+  --assets-dir .\artifacts\teaching_assets `
+  --report .\artifacts\teaching_validation.json
+```
+
+验证器会跳过 notebook magic 和 shell 单元的普通 Python AST 编译，同时把跳过原因写入报告。静态验证不会自动执行 notebook；对于不可信、昂贵、依赖凭据或可能产生副作用的 notebook，必须先审查再执行。
+
+## 产物结构
+
+```text
+artifacts/
+  notebook_inspection.json
+  teaching_manifest.json
+  teaching_imagegen_prompts.json
+  teaching_validation.json
+  teaching_assets/
+```
+
+manifest 用于记录源文件哈希、转换模式、图片计划、插入的单元、修改过的代码单元以及是否改变了执行逻辑。
+
 ## 工作流摘要
 
 1. 先读取原 notebook，识别数据、训练、推理、导出、交付阶段。
 2. 创建教学副本，保留原工程逻辑。
-3. 先写 6 到 9 张图片的视觉计划和逐页 imagegen prompt 包。
+3. 选择 quick、standard 或 full 模式，写出对应规模的视觉计划和逐页 imagegen prompt 包。
 4. 生成首屏封面、核心原理图、数据流程图、架构图、技术选型图、参数/实验图、质量门禁图和交付物图。
 5. 加入教学讲解、路线图、成果卡和风险提示。
 6. 使用 inline HTML 卡片增强可读性。
 7. 校验 JSON、代码单元、图片引用、图片文字准确性和 HTML 预览。
+
+## 安全边界
+
+- 不把 API key、token、密码、原始个人记录或专有源代码发送给 imagegen。
+- 生成视觉素材前先删除或概括敏感内容和无关绝对路径。
+- 默认只进行静态检查，不自动执行不可信 notebook。
+- 保留源 notebook、cell ID、metadata、tags、outputs 和 attachments；必须修改代码时，在 manifest 中记录原因。
 
 ## Codex 专用说明
 
@@ -135,5 +194,8 @@ git pull
 
 - `SKILL.md`
 - `agents/openai.yaml`
+- `references/*.md`
+- `scripts/*.py`
+- `tests/test_notebook_tools.py`
 
 Codex 会通过 `SKILL.md` 的 frontmatter 判断何时触发该 skill。README 仅用于 GitHub 页面说明，不参与 skill 的触发逻辑。
