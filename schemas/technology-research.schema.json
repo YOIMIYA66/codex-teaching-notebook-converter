@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/YOIMIYA66/codex-teaching-notebook-converter/schemas/technology-research.schema.json",
+  "title": "Teaching Notebook Technology Research",
+  "type": "object",
+  "required": ["version", "researched_at", "web_search_used", "search_queries", "technologies"],
+  "properties": {
+    "version": {"const": 1},
+    "researched_at": {"type": "string", "minLength": 1},
+    "web_search_used": {"type": "boolean"},
+    "search_queries": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "technologies": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "ecosystem",
+          "detected_version",
+          "selection_context",
+          "why_selected",
+          "advantages",
+          "tradeoffs",
+          "alternatives",
+          "sources"
+        ],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "name": {"type": "string", "minLength": 1},
+          "ecosystem": {"enum": ["paddle", "other"]},
+          "detected_version": {"type": "string", "minLength": 1},
+          "selection_context": {"type": "string", "minLength": 1},
+          "why_selected": {"type": "string", "minLength": 1},
+          "advantages": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+          "tradeoffs": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+          "alternatives": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["name", "not_selected_reason"],
+              "properties": {
+                "name": {"type": "string", "minLength": 1},
+                "not_selected_reason": {"type": "string", "minLength": 1}
+              }
+            }
+          },
+          "sources": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["id", "title", "url", "source_type", "is_primary", "retrieved_at", "claims_supported"],
+              "properties": {
+                "id": {"type": "string", "minLength": 1},
+                "title": {"type": "string", "minLength": 1},
+                "url": {"type": "string", "pattern": "^https?://"},
+                "source_type": {
+                  "enum": [
+                    "official_documentation",
+                    "official_repository",
+                    "release_notes",
+                    "official_tutorial",
+                    "community_blog",
+                    "third_party_blog",
+                    "research_paper"
+                  ]
+                },
+                "is_primary": {"type": "boolean"},
+                "retrieved_at": {"type": "string", "minLength": 1},
+                "claims_supported": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

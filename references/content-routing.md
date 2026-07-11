@@ -40,6 +40,8 @@ Before planning an imagegen call, answer:
 
 Use imagegen when answers 1-3 are yes and answer 4 can be satisfied. Otherwise use HTML, a table, or Markdown.
 
+Technology-selection explanations usually start as a source-backed comparison table or HTML decision panel. Promote them to imagegen only when an integrated tradeoff map, ecosystem relationship, or architecture fit communicates more than rows and columns. Source citations remain in notebook text even when an imagegen infographic is used.
+
 ## Content Plan Contract
 
 Record every planned teaching element before generation:

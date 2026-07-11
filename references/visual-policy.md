@@ -58,3 +58,18 @@ When too dense, regenerate with fewer groups, shorter labels, larger typography,
 - Reference project-local assets, not only a temporary generated-images location.
 - Embed critical images as notebook attachments when portability requires it.
 - Never send secrets, raw personal records, confidential code, or identifying local paths to image generation.
+
+## Paddle Brand References
+
+Paddle-related teaching visuals may reproduce the official Paddle logo exactly when the notebook is explicitly about Paddle technology and identifies that affiliation.
+
+Before generating a logo-bearing image:
+
+1. Use web search to locate an official Paddle logo or brand image from an official Paddle website, official PaddlePaddle GitHub organization, AI Studio, or another project-approved official source.
+2. Save a project-local reference copy under `artifacts/brand_assets/` and record its source URL and SHA-256 in the prompt pack.
+3. Pass that local reference image to `image_gen` as an image reference. Do not rely on a text-only prompt to reconstruct the logo from memory.
+4. Require exact preservation of logo geometry, colors, proportions, orientation, and wordmark. Ban stylization, recoloring, deformation, invented symbols, translated wordmarks, and decorative effects applied to the logo itself.
+5. Label the surrounding teaching visual with the relevant Paddle technology name, such as `PaddlePaddle 飞桨`, `PaddleOCR`, `PaddleX`, or `PaddleFormers`.
+6. Record `brand_fidelity: passed` only after comparing the generated result with the official reference.
+
+Reject approximate or distorted Paddle logos. Regenerate with the official reference attached. If imagegen repeatedly cannot preserve the mark exactly, use the official asset unmodified as a separate notebook/HTML brand element rather than accepting an incorrect generated logo.

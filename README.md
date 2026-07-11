@@ -29,6 +29,8 @@ Codex 专用 skill：将工程化 Jupyter Notebook 转换成图文并茂、结�
 - 校验 notebook JSON、Python 代码单元和 HTML 预览
 - 提供标准库检查与验证脚本，识别 magics、shell cells、缺失资源、重复 cell ID 和代码变更
 - 生成 inspection、manifest、prompt pack 和 validation report，便于追踪转换过程
+- 使用 web search 研究主要技术的选择理由、项目优势、限制、替代方案和版本兼容性
+- Paddle 技术优先引用官方文档、官方仓库、release notes、AI Studio 和官方社区资料
 
 ## 转换模式
 
@@ -58,6 +60,26 @@ skill 会优先选择满足任务的最小模式，用户明确指定时以用�
 - 图数量：通常 1 张首屏封面 + 5 到 8 张正文教学图。
 
 类似“一个标题 + 多条勾选项 + 一条禁止项”的质量门禁，不需要 imagegen。它没有需要视觉化的空间或因果关系，应使用 inline HTML 卡片或表格实现，从而保持文字精确、可搜索、可复制和便于更新。
+
+## 技术选型研究
+
+普通工程 notebook 往往只展示“如何调用”，教学 notebook 还必须说明：
+
+- 这个技术解决什么问题。
+- 为什么适合当前数据、模型、硬件和交付目标。
+- 在当前项目中具体有哪些优势。
+- 有哪些兼容性、性能、维护或部署限制。
+- 有哪些合理替代方案，为什么当前没有选择它们。
+
+转换时默认使用 web search 获取当前资料。事实来源优先级为：官方文档和 API、官方 GitHub 仓库与 release notes、官方教程和 AI Studio、Paddle/PFCC 社区技术文章、原始论文、第三方技术博客。第三方博客可以帮助解释，但不能单独支撑版本、兼容性、benchmark 或安全性结论。
+
+研究结果保存到 `artifacts/teaching_research_sources.json`，技术选型正文使用可点击链接引用来源。Paddle 相关技术至少需要一个飞桨官方来源；条件允许时使用文档与仓库/release notes 两类来源交叉验证。
+
+## Paddle 标识
+
+Paddle 相关教学图允许准确呈现官方标识。生成前先从飞桨官方网站、PaddlePaddle 官方 GitHub、AI Studio 或项目认可的官方来源取得标识文件，保存到 `artifacts/brand_assets/` 并记录来源和 SHA-256。
+
+imagegen 生成带标识的信息图时，必须把官方标识文件作为参考图输入，并要求保持形状、颜色、比例、方向和 wordmark 一致，不进行改色、变形或风格化重绘。图片正文同时明确标注 `PaddlePaddle 飞桨` 或具体 Paddle 技术名称。生成结果与参考图不一致时不得验收。
 
 推荐 imagegen prompt 思路：
 
@@ -160,6 +182,7 @@ python .\scripts\validate_notebook.py .\source.teaching.ipynb `
   --assets-dir .\artifacts\teaching_assets `
   --manifest .\artifacts\teaching_manifest.json `
   --prompt-pack .\artifacts\teaching_imagegen_prompts.json `
+  --research-sources .\artifacts\teaching_research_sources.json `
   --report .\artifacts\teaching_validation.json
 ```
 
@@ -170,6 +193,7 @@ python .\scripts\validate_notebook.py .\source.teaching.ipynb `
 ```text
 artifacts/
   notebook_inspection.json
+  teaching_research_sources.json
   teaching_manifest.json
   teaching_imagegen_prompts.json
   teaching_validation.json
@@ -180,13 +204,14 @@ manifest 用于记录源文件哈希、转换模式、图片计划、插入的�
 
 ## 工作流摘要
 
-1. 先读取原 notebook，识别数据、训练、推理、导出、交付阶段。
-2. 创建教学副本，保留原工程逻辑。
-3. 选择 quick、standard 或 full 模式，为每个教学元素指定 imagegen、HTML 卡片、Markdown 表格或普通 Markdown。
-4. 使用 imagegen 生成高信息密度的首屏、核心原理、数据流、架构、技术取舍和实验关系图；简单质量门禁与交付清单使用结构化 HTML 或表格。
-5. 加入教学讲解、路线图、成果卡和风险提示。
-6. 使用 inline HTML 卡片增强可读性。
-7. 校验 JSON、代码单元、图片引用、图片文字准确性和 HTML 预览。
+1. 先读取原 notebook，识别数据、训练、推理、导出、交付阶段和主要技术。
+2. 使用 web search 研究技术选择、优势、限制、替代方案和版本信息，保存来源清单。
+3. 创建教学副本，保留原工程逻辑。
+4. 选择 quick、standard 或 full 模式，为每个教学元素指定 imagegen、HTML 卡片、Markdown 表格或普通 Markdown。
+5. 使用 imagegen 生成高信息密度的首屏、核心原理、数据流、架构、技术取舍和实验关系图；简单质量门禁与交付清单使用结构化 HTML 或表格。
+6. 加入带来源链接的技术选型说明、教学讲解、路线图、成果卡和风险提示。
+7. 使用 inline HTML 卡片增强可读性。
+8. 校验 JSON、研究来源、代码单元、图片引用、品牌参考、图片文字准确性和 HTML 预览。
 
 ## 安全边界
 

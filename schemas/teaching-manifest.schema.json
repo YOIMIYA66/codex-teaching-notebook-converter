@@ -10,6 +10,7 @@
     "mode",
     "mode_reason",
     "planned_images",
+    "research_artifact",
     "content_plan",
     "generated_assets",
     "inserted_cell_ids",
@@ -24,6 +25,7 @@
     "mode": {"enum": ["quick", "standard", "full"]},
     "mode_reason": {"type": "string", "minLength": 1},
     "planned_images": {"type": "integer", "minimum": 0, "maximum": 9},
+    "research_artifact": {"type": "string", "minLength": 1},
     "content_plan": {
       "type": "array",
       "items": {

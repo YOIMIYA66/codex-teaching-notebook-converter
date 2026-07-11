@@ -35,6 +35,7 @@ Use this project-local layout unless the repository already has an equivalent co
 ```text
 artifacts/
   notebook_inspection.json
+  teaching_research_sources.json
   teaching_manifest.json
   teaching_imagegen_prompts.json
   teaching_validation.json
@@ -53,6 +54,7 @@ The manifest should include:
   "mode": "standard",
   "mode_reason": "18 code cells across data, training, evaluation, and export",
   "planned_images": 4,
+  "research_artifact": "artifacts/teaching_research_sources.json",
   "content_plan": [
     {
       "id": "quality-gate",
@@ -72,6 +74,8 @@ The manifest should include:
 
 The machine-readable contract is `schemas/teaching-manifest.schema.json`. The validator uses equivalent standard-library checks so no JSON Schema dependency is required at runtime.
 
+Technology research follows `schemas/technology-research.schema.json` and `references/technology-research.md`.
+
 ## Editing Rules
 
 - Create a teaching copy before large edits.
@@ -89,11 +93,12 @@ A full conversion normally contains:
 1. Hero visual and project positioning.
 2. Outcomes and source-backed metrics.
 3. Learner route map.
-4. Stage explanations before important code.
-5. Output-reading notes after important code.
-6. Validation gates and failure modes.
-7. Limitations and high-stakes caveats where relevant.
-8. Deliverables and artifact locations.
+4. Source-backed technology-selection rationale.
+5. Stage explanations before important code.
+6. Output-reading notes after important code.
+7. Validation gates and failure modes.
+8. Limitations and high-stakes caveats where relevant.
+9. Deliverables and artifact locations.
 
 Route each element through `content-routing.md`. The structure above does not imply that every section needs an image. Exact list-like content should remain searchable HTML, tables, or Markdown.
 

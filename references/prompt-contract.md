@@ -8,6 +8,17 @@ Create `artifacts/teaching_imagegen_prompts.json` before final generation. Use t
 {
   "version": 1,
   "mode": "standard",
+  "brand_references": [
+    {
+      "id": "paddle-official-logo",
+      "brand": "PaddlePaddle 飞桨",
+      "official_source_url": "https://www.paddlepaddle.org.cn/",
+      "local_file": "artifacts/brand_assets/paddle-official.png",
+      "reference_sha256": "<sha256>",
+      "attribution": "PaddlePaddle 飞桨官方标识",
+      "usage_context": "Open-source teaching notebook for the Paddle community"
+    }
+  ],
   "images": [
     {
       "id": "data-flow",
@@ -22,6 +33,8 @@ Create `artifacts/teaching_imagegen_prompts.json` before final generation. Use t
       },
       "required_text": ["输入数据", "预处理", "LoRA 训练", "质量门禁", "模型导出"],
       "source_locked_facts": ["Qwen3-0.6B", "learning_rate=2e-4"],
+      "research_source_ids": ["paddleformers-repo"],
+      "brand_reference_ids": ["paddle-official-logo"],
       "prompt": "Complete imagegen prompt...",
       "negative_constraints": ["no invented metrics", "no misspellings", "no extra text"],
       "output_file": "artifacts/teaching_assets/data-flow.png",
@@ -32,7 +45,8 @@ Create `artifacts/teaching_imagegen_prompts.json` before final generation. Use t
         "text_accuracy": "passed",
         "numeric_accuracy": "passed",
         "readability": "passed",
-        "information_density": "passed"
+        "information_density": "passed",
+        "brand_fidelity": "passed"
       },
       "repairs": []
     }
@@ -52,6 +66,7 @@ Create the complete final image directly. Render all required text inside the im
 Title, exact text: <title>
 Required text, exact spelling: <short labels, steps, metrics, warnings>
 Source-locked technical facts that must not change: <models, frameworks, values, filenames, paths>
+Research source IDs supporting technical claims: <stable IDs from teaching_research_sources.json>
 Purpose and information hierarchy: <what the learner should understand first, second, and third>
 Information density: moderately high, with <4-7> coherent regions and <12-24> short text items. The visual should replace substantial prose while remaining readable at normal notebook width.
 Visual style: <hero or light academic body style>
@@ -66,6 +81,8 @@ Negative constraints: no gibberish, no misspellings, no invented values, no fake
 - Do not ask it to leave blank space for later text, charts, screenshots, QR codes, or signatures.
 - Keep text grouped into a small number of visually coherent blocks.
 - Do not use imagegen for a linear checklist, status matrix, file inventory, parameter table, or evidence list that is better rendered as HTML or Markdown.
+- When a Paddle logo appears, attach the official project-local logo reference to the imagegen call and require exact reproduction without stylization. Record the brand reference ID in the image entry.
+- Keep citations and source links in notebook text. `research_source_ids` provide provenance for image claims but do not replace visible notebook citations.
 - Use one generation call per distinct image.
-- After acceptance, record the asset SHA-256 and mark all four inspection checks as `passed`.
+- After acceptance, record the asset SHA-256 and mark the four standard inspection checks as `passed`. Logo-bearing images also require `brand_fidelity: passed`.
 - During iteration, `status` may be `planned` or `regenerated`. Before final validation it must be `accepted` or `repaired`.

@@ -63,11 +63,23 @@ class NotebookToolTests(unittest.TestCase):
         code_changes=None,
         source_changes=None,
         image=False,
+        brand=False,
         wrong_hash=False,
+        unofficial_paddle_source=False,
     ):
         artifacts = root / "artifacts"
         assets = artifacts / "teaching_assets"
         assets.mkdir(parents=True)
+        teaching_data = json.loads(teaching.read_text(encoding="utf-8"))
+        if not any(cell.get("id") == "m1" for cell in teaching_data["cells"]):
+            teaching_data["cells"].append(
+                markdown(
+                    "## Technology selection\n"
+                    "Paddle is used for the existing execution path. "
+                    "[Official documentation](https://www.paddlepaddle.org.cn/documentation/zh/index_cn.html)."
+                )
+            )
+            teaching.write_text(json.dumps(teaching_data), encoding="utf-8")
         content_plan = [
             {
                 "id": "quality-gate",
@@ -79,6 +91,25 @@ class NotebookToolTests(unittest.TestCase):
         ]
         generated_assets = []
         images = []
+        brand_references = []
+        brand_reference_ids = []
+        if brand:
+            brand_assets = artifacts / "brand_assets"
+            brand_assets.mkdir(parents=True)
+            brand_file = brand_assets / "paddle.png"
+            brand_file.write_bytes(b"official-paddle-logo")
+            brand_references.append(
+                {
+                    "id": "paddle-logo",
+                    "brand": "PaddlePaddle 飞桨",
+                    "official_source_url": "https://www.paddlepaddle.org.cn/",
+                    "local_file": "artifacts/brand_assets/paddle.png",
+                    "reference_sha256": validate_module.sha256(brand_file),
+                    "attribution": "PaddlePaddle 飞桨官方标识",
+                    "usage_context": "Open-source Paddle teaching notebook",
+                }
+            )
+            brand_reference_ids.append("paddle-logo")
         if image:
             asset = assets / "flow.png"
             asset.write_bytes(b"generated-image")
@@ -107,6 +138,8 @@ class NotebookToolTests(unittest.TestCase):
                     },
                     "required_text": ["Input", "Train", "Validate", "Export"],
                     "source_locked_facts": ["model-v1"],
+                    "research_source_ids": ["paddle-docs"],
+                    "brand_reference_ids": brand_reference_ids,
                     "prompt": "Create the final direct-use teaching infographic.",
                     "negative_constraints": ["no invented values"],
                     "output_file": output_file,
@@ -122,6 +155,45 @@ class NotebookToolTests(unittest.TestCase):
                     "repairs": [],
                 }
             )
+            if brand:
+                images[0]["inspection"]["brand_fidelity"] = "passed"
+
+        research = {
+            "version": 1,
+            "researched_at": "2026-07-11",
+            "web_search_used": True,
+            "search_queries": ["site:paddlepaddle.org.cn Paddle official documentation"],
+            "technologies": [
+                {
+                    "id": "paddle",
+                    "name": "PaddlePaddle",
+                    "ecosystem": "paddle",
+                    "detected_version": "unknown",
+                    "selection_context": "Use the framework already present in the notebook.",
+                    "why_selected": "It matches the notebook APIs and delivery environment.",
+                    "advantages": ["Preserves the existing Paddle execution path"],
+                    "tradeoffs": ["Version compatibility must be verified"],
+                    "alternatives": [
+                        {"name": "PyTorch", "not_selected_reason": "Would require rewriting the existing workflow"}
+                    ],
+                    "sources": [
+                        {
+                            "id": "paddle-docs",
+                            "title": "Paddle official documentation",
+                            "url": (
+                                "https://example.com/paddle"
+                                if unofficial_paddle_source
+                                else "https://www.paddlepaddle.org.cn/documentation/zh/index_cn.html"
+                            ),
+                            "source_type": "official_documentation",
+                            "is_primary": True,
+                            "retrieved_at": "2026-07-11",
+                            "claims_supported": ["Official framework documentation"],
+                        }
+                    ],
+                }
+            ],
+        }
 
         manifest = {
             "source_notebook": source.name,
@@ -130,6 +202,7 @@ class NotebookToolTests(unittest.TestCase):
             "mode": "quick",
             "mode_reason": "Focused fixture",
             "planned_images": len(images),
+            "research_artifact": "artifacts/teaching_research_sources.json",
             "content_plan": content_plan,
             "generated_assets": generated_assets,
             "inserted_cell_ids": ["m1"],
@@ -139,9 +212,14 @@ class NotebookToolTests(unittest.TestCase):
         }
         manifest_path = artifacts / "teaching_manifest.json"
         prompt_path = artifacts / "teaching_imagegen_prompts.json"
+        research_path = artifacts / "teaching_research_sources.json"
         manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
-        prompt_path.write_text(json.dumps({"version": 1, "mode": "quick", "images": images}), encoding="utf-8")
-        return assets, manifest_path, prompt_path
+        prompt_path.write_text(
+            json.dumps({"version": 1, "mode": "quick", "brand_references": brand_references, "images": images}),
+            encoding="utf-8",
+        )
+        research_path.write_text(json.dumps(research), encoding="utf-8")
+        return assets, manifest_path, prompt_path, research_path
 
     def test_inspection_detects_chinese_stages_magics_and_secret_signal(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -208,13 +286,13 @@ class NotebookToolTests(unittest.TestCase):
             root = Path(temp)
             source = self.write_notebook(root, "source.ipynb", [code("x = 1")])
             teaching = self.write_notebook(root, "teaching.ipynb", [code("x = 2")])
-            assets, manifest, prompt = self.write_delivery(
+            assets, manifest, prompt, research = self.write_delivery(
                 root,
                 source,
                 teaching,
                 code_changes=[{"cell_id": "c1", "reason": "User requested a functional change"}],
             )
-            report = validate_module.validate(teaching, source, assets, manifest, prompt)
+            report = validate_module.validate(teaching, source, assets, manifest, prompt, research)
             self.assertTrue(report["ok"], report["errors"])
 
     def test_undisclosed_output_change_is_an_error(self):
@@ -222,8 +300,8 @@ class NotebookToolTests(unittest.TestCase):
             root = Path(temp)
             source = self.write_notebook(root, "source.ipynb", [code("x = 1", outputs=[{"output_type": "stream", "name": "stdout", "text": "1"}])])
             teaching = self.write_notebook(root, "teaching.ipynb", [code("x = 1")])
-            assets, manifest, prompt = self.write_delivery(root, source, teaching)
-            report = validate_module.validate(teaching, source, assets, manifest, prompt)
+            assets, manifest, prompt, research = self.write_delivery(root, source, teaching)
+            report = validate_module.validate(teaching, source, assets, manifest, prompt, research)
             self.assertFalse(report["ok"])
             self.assertTrue(any("Undisclosed source-cell changes" in error for error in report["errors"]))
 
@@ -236,8 +314,8 @@ class NotebookToolTests(unittest.TestCase):
             teaching_cell.pop("id")
             source = self.write_notebook(root, "source.ipynb", [source_cell])
             teaching = self.write_notebook(root, "teaching.ipynb", [teaching_cell])
-            assets, manifest, prompt = self.write_delivery(root, source, teaching)
-            report = validate_module.validate(teaching, source, assets, manifest, prompt)
+            assets, manifest, prompt, research = self.write_delivery(root, source, teaching)
+            report = validate_module.validate(teaching, source, assets, manifest, prompt, research)
             self.assertFalse(report["ok"])
             self.assertTrue(any("code-sequence" in error for error in report["errors"]))
 
@@ -246,8 +324,8 @@ class NotebookToolTests(unittest.TestCase):
             root = Path(temp)
             source = self.write_notebook(root, "source.ipynb", [code("x = 1")])
             teaching = self.write_notebook(root, "teaching.ipynb", [code("x = 1")])
-            assets, manifest, prompt = self.write_delivery(root, source, teaching, image=True)
-            report = validate_module.validate(teaching, source, assets, manifest, prompt)
+            assets, manifest, prompt, research = self.write_delivery(root, source, teaching, image=True)
+            report = validate_module.validate(teaching, source, assets, manifest, prompt, research)
             self.assertTrue(report["ok"], report["errors"])
             self.assertEqual(report["checks"]["prompt_pack"]["accepted_assets"], ["flow.png"])
 
@@ -256,10 +334,61 @@ class NotebookToolTests(unittest.TestCase):
             root = Path(temp)
             source = self.write_notebook(root, "source.ipynb", [code("x = 1")])
             teaching = self.write_notebook(root, "teaching.ipynb", [code("x = 1")])
-            assets, manifest, prompt = self.write_delivery(root, source, teaching, image=True, wrong_hash=True)
-            report = validate_module.validate(teaching, source, assets, manifest, prompt)
+            assets, manifest, prompt, research = self.write_delivery(root, source, teaching, image=True, wrong_hash=True)
+            report = validate_module.validate(teaching, source, assets, manifest, prompt, research)
             self.assertFalse(report["ok"])
             self.assertTrue(any("SHA-256" in error for error in report["errors"]))
+
+    def test_paddle_research_requires_official_source(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = self.write_notebook(root, "source.ipynb", [code("x = 1")])
+            teaching = self.write_notebook(root, "teaching.ipynb", [code("x = 1")])
+            assets, manifest, prompt, research = self.write_delivery(
+                root, source, teaching, unofficial_paddle_source=True
+            )
+            report = validate_module.validate(teaching, source, assets, manifest, prompt, research)
+            self.assertFalse(report["ok"])
+            self.assertTrue(any("no official Paddle source" in error for error in report["errors"]))
+
+    def test_paddle_brand_reference_and_fidelity_pass(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = self.write_notebook(root, "source.ipynb", [code("x = 1")])
+            teaching = self.write_notebook(root, "teaching.ipynb", [code("x = 1")])
+            assets, manifest, prompt, research = self.write_delivery(
+                root, source, teaching, image=True, brand=True
+            )
+            report = validate_module.validate(teaching, source, assets, manifest, prompt, research)
+            self.assertTrue(report["ok"], report["errors"])
+
+    def test_brand_reference_requires_fidelity_inspection(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = self.write_notebook(root, "source.ipynb", [code("x = 1")])
+            teaching = self.write_notebook(root, "teaching.ipynb", [code("x = 1")])
+            assets, manifest, prompt, research = self.write_delivery(
+                root, source, teaching, image=True, brand=True
+            )
+            prompt_data = json.loads(prompt.read_text(encoding="utf-8"))
+            prompt_data["images"][0]["inspection"].pop("brand_fidelity")
+            prompt.write_text(json.dumps(prompt_data), encoding="utf-8")
+            report = validate_module.validate(teaching, source, assets, manifest, prompt, research)
+            self.assertFalse(report["ok"])
+            self.assertTrue(any("brand_fidelity" in error for error in report["errors"]))
+
+    def test_researched_technology_requires_visible_notebook_citation(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = self.write_notebook(root, "source.ipynb", [code("x = 1")])
+            teaching = self.write_notebook(root, "teaching.ipynb", [code("x = 1")])
+            assets, manifest, prompt, research = self.write_delivery(root, source, teaching)
+            teaching_data = json.loads(teaching.read_text(encoding="utf-8"))
+            teaching_data["cells"] = [cell for cell in teaching_data["cells"] if cell.get("cell_type") != "markdown"]
+            teaching.write_text(json.dumps(teaching_data), encoding="utf-8")
+            report = validate_module.validate(teaching, source, assets, manifest, prompt, research)
+            self.assertFalse(report["ok"])
+            self.assertTrue(any("no research-source link" in error for error in report["errors"]))
 
 
 if __name__ == "__main__":

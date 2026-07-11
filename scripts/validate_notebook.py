@@ -23,6 +23,15 @@ VALID_MODES = {"quick": (0, 2), "standard": (3, 5), "full": (6, 9)}
 VALID_RENDERING_METHODS = {"imagegen", "html_cards", "markdown_table", "markdown"}
 FINAL_IMAGE_STATUSES = {"accepted", "repaired"}
 INSPECTION_FIELDS = {"text_accuracy", "numeric_accuracy", "readability", "information_density"}
+SOURCE_TYPES = {
+    "official_documentation",
+    "official_repository",
+    "release_notes",
+    "official_tutorial",
+    "community_blog",
+    "third_party_blog",
+    "research_paper",
+}
 
 
 def source_text(cell: dict[str, Any]) -> str:
@@ -32,6 +41,21 @@ def source_text(cell: dict[str, Any]) -> str:
 
 def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def is_official_paddle_url(url: str) -> bool:
+    parsed = urlsplit(url)
+    host = (parsed.hostname or "").lower()
+    path_parts = [part.lower() for part in parsed.path.split("/") if part]
+    if host == "paddlepaddle.org.cn" or host.endswith(".paddlepaddle.org.cn"):
+        return True
+    if host == "aistudio.baidu.com" or host.endswith(".aistudio.baidu.com"):
+        return True
+    if host == "pfcc.blog" or host.endswith(".pfcc.blog"):
+        return True
+    if host in {"github.com", "raw.githubusercontent.com"} and path_parts and path_parts[0] == "paddlepaddle":
+        return True
+    return host == "paddlepaddle.github.io" or host.endswith(".paddlepaddle.github.io")
 
 
 def notebook_language(notebook: dict[str, Any]) -> str:
@@ -95,7 +119,12 @@ def disclosure_ids(entries: Any, errors: list[str], field: str) -> set[str]:
 
 
 def validate_manifest(
-    manifest: dict[str, Any], source_path: Path, notebook_path: Path, errors: list[str], warnings: list[str]
+    manifest: dict[str, Any],
+    source_path: Path,
+    notebook_path: Path,
+    research_path: Path,
+    errors: list[str],
+    warnings: list[str],
 ) -> dict[str, Any]:
     required = {
         "source_notebook",
@@ -104,6 +133,7 @@ def validate_manifest(
         "mode",
         "mode_reason",
         "planned_images",
+        "research_artifact",
         "content_plan",
         "generated_assets",
         "inserted_cell_ids",
@@ -117,6 +147,11 @@ def validate_manifest(
 
     if manifest.get("source_sha256") != sha256(source_path):
         errors.append("Manifest source_sha256 does not match the source notebook.")
+    research_artifact = manifest.get("research_artifact")
+    if isinstance(research_artifact, str) and research_artifact:
+        declared_research = (notebook_path.parent / research_artifact).resolve()
+        if declared_research != research_path.resolve():
+            errors.append("Manifest research_artifact does not point to the supplied research sources file.")
 
     mode = manifest.get("mode")
     planned_images = manifest.get("planned_images")
@@ -195,6 +230,131 @@ def validate_manifest(
         "code_disclosures": code_disclosures,
         "source_disclosures": source_disclosures,
         "generated_assets": set(generated_assets),
+    }
+
+
+def validate_research_sources(
+    research: dict[str, Any], errors: list[str], warnings: list[str]
+) -> dict[str, Any]:
+    if research.get("version") != 1:
+        errors.append("Technology research version must be 1.")
+    if not isinstance(research.get("researched_at"), str) or not research.get("researched_at", "").strip():
+        errors.append("Technology research researched_at must be a non-empty string.")
+    web_search_used = research.get("web_search_used")
+    if not isinstance(web_search_used, bool):
+        errors.append("Technology research web_search_used must be a boolean.")
+    elif not web_search_used:
+        warnings.append("Technology research did not use web search; current version and compatibility claims need review.")
+    search_queries = research.get("search_queries")
+    if not isinstance(search_queries, list) or not all(isinstance(query, str) and query.strip() for query in search_queries):
+        errors.append("Technology research search_queries must be an array of non-empty strings.")
+    elif web_search_used and not search_queries:
+        errors.append("Technology research used web search but recorded no search queries.")
+
+    technologies = research.get("technologies")
+    if not isinstance(technologies, list) or not technologies:
+        errors.append("Technology research technologies must be a non-empty array.")
+        return {
+            "technology_ids": set(),
+            "source_ids": set(),
+            "paddle_technology_ids": set(),
+            "technology_source_urls": {},
+        }
+
+    technology_ids: set[str] = set()
+    source_ids: set[str] = set()
+    paddle_technology_ids: set[str] = set()
+    technology_source_urls: dict[str, set[str]] = {}
+    for index, technology in enumerate(technologies):
+        if not isinstance(technology, dict):
+            errors.append(f"Technology research technologies[{index}] must be an object.")
+            continue
+        tech_id = str(technology.get("id", ""))
+        if not tech_id:
+            errors.append(f"Technology research technologies[{index}] has no id.")
+            continue
+        if tech_id in technology_ids:
+            errors.append(f"Duplicate technology research id: {tech_id}")
+        technology_ids.add(tech_id)
+
+        ecosystem = technology.get("ecosystem")
+        if ecosystem not in {"paddle", "other"}:
+            errors.append(f"Technology {tech_id} ecosystem must be paddle or other.")
+        if ecosystem == "paddle":
+            paddle_technology_ids.add(tech_id)
+
+        for field in ("name", "detected_version", "selection_context", "why_selected"):
+            if not isinstance(technology.get(field), str) or not technology.get(field, "").strip():
+                errors.append(f"Technology {tech_id} field {field} must be a non-empty string.")
+        for field in ("advantages", "tradeoffs"):
+            value = technology.get(field)
+            if not isinstance(value, list) or not value or not all(isinstance(item, str) and item.strip() for item in value):
+                errors.append(f"Technology {tech_id} field {field} must be a non-empty array of strings.")
+
+        alternatives = technology.get("alternatives")
+        if not isinstance(alternatives, list) or not alternatives:
+            errors.append(f"Technology {tech_id} alternatives must be a non-empty array.")
+        else:
+            for alt_index, alternative in enumerate(alternatives):
+                if (
+                    not isinstance(alternative, dict)
+                    or not isinstance(alternative.get("name"), str)
+                    or not alternative.get("name", "").strip()
+                    or not isinstance(alternative.get("not_selected_reason"), str)
+                    or not alternative.get("not_selected_reason", "").strip()
+                ):
+                    errors.append(f"Technology {tech_id} alternatives[{alt_index}] requires name and not_selected_reason.")
+
+        sources = technology.get("sources")
+        if not isinstance(sources, list) or not sources:
+            errors.append(f"Technology {tech_id} sources must be a non-empty array.")
+            continue
+        if len(sources) < 2:
+            warnings.append(f"Technology {tech_id} has only one source; two source types are preferred when available.")
+        has_primary = False
+        has_official_paddle = False
+        technology_source_urls[tech_id] = set()
+        for source_index, source in enumerate(sources):
+            if not isinstance(source, dict):
+                errors.append(f"Technology {tech_id} sources[{source_index}] must be an object.")
+                continue
+            source_id = str(source.get("id", ""))
+            if not source_id:
+                errors.append(f"Technology {tech_id} sources[{source_index}] has no id.")
+            elif source_id in source_ids:
+                errors.append(f"Duplicate technology research source id: {source_id}")
+            else:
+                source_ids.add(source_id)
+            for field in ("title", "url", "retrieved_at"):
+                if not isinstance(source.get(field), str) or not source.get(field, "").strip():
+                    errors.append(f"Research source {source_id or source_index} field {field} must be a non-empty string.")
+            source_url = str(source.get("url", ""))
+            if source_url:
+                technology_source_urls[tech_id].add(source_url)
+            if urlsplit(source_url).scheme not in {"http", "https"}:
+                errors.append(f"Research source {source_id or source_index} must use an HTTP(S) URL.")
+            source_type = source.get("source_type")
+            if source_type not in SOURCE_TYPES:
+                errors.append(f"Research source {source_id or source_index} has invalid source_type.")
+            if not isinstance(source.get("is_primary"), bool):
+                errors.append(f"Research source {source_id or source_index} is_primary must be a boolean.")
+            elif source.get("is_primary"):
+                has_primary = True
+            claims = source.get("claims_supported")
+            if not isinstance(claims, list) or not claims or not all(isinstance(claim, str) and claim.strip() for claim in claims):
+                errors.append(f"Research source {source_id or source_index} claims_supported must be a non-empty array.")
+            if is_official_paddle_url(source_url):
+                has_official_paddle = True
+        if not has_primary:
+            errors.append(f"Technology {tech_id} has no primary source.")
+        if ecosystem == "paddle" and not has_official_paddle:
+            errors.append(f"Paddle technology {tech_id} has no official Paddle source.")
+
+    return {
+        "technology_ids": technology_ids,
+        "source_ids": source_ids,
+        "paddle_technology_ids": paddle_technology_ids,
+        "technology_source_urls": technology_source_urls,
     }
 
 
@@ -298,6 +458,7 @@ def validate_prompt_pack(
     prompt_pack: dict[str, Any],
     manifest: dict[str, Any],
     manifest_state: dict[str, Any],
+    research_state: dict[str, Any],
     notebook_path: Path,
     assets_dir: Path,
     errors: list[str],
@@ -307,6 +468,39 @@ def validate_prompt_pack(
         errors.append("Prompt pack version must be 1.")
     if prompt_pack.get("mode") != manifest.get("mode"):
         errors.append("Prompt pack mode does not match manifest mode.")
+    brand_references = prompt_pack.get("brand_references")
+    brand_reference_ids: set[str] = set()
+    if not isinstance(brand_references, list):
+        errors.append("Prompt pack brand_references must be an array.")
+        brand_references = []
+    for index, brand_reference in enumerate(brand_references):
+        if not isinstance(brand_reference, dict):
+            errors.append(f"Prompt pack brand_references[{index}] must be an object.")
+            continue
+        reference_id = str(brand_reference.get("id", ""))
+        if not reference_id:
+            errors.append(f"Prompt pack brand_references[{index}] has no id.")
+            continue
+        if reference_id in brand_reference_ids:
+            errors.append(f"Duplicate prompt-pack brand reference id: {reference_id}")
+        brand_reference_ids.add(reference_id)
+        for field in ("brand", "official_source_url", "local_file", "reference_sha256", "attribution", "usage_context"):
+            if not isinstance(brand_reference.get(field), str) or not brand_reference.get(field, "").strip():
+                errors.append(f"Brand reference {reference_id} field {field} must be a non-empty string.")
+        brand_name = str(brand_reference.get("brand", ""))
+        source_url = str(brand_reference.get("official_source_url", ""))
+        if "paddle" in brand_name.lower() or "飞桨" in brand_name:
+            if not is_official_paddle_url(source_url):
+                errors.append(f"Paddle brand reference {reference_id} does not use an official Paddle source URL.")
+            attribution = str(brand_reference.get("attribution", ""))
+            if "paddle" not in attribution.lower() and "飞桨" not in attribution:
+                errors.append(f"Paddle brand reference {reference_id} attribution does not identify PaddlePaddle/飞桨.")
+        reference_file = str(brand_reference.get("local_file", ""))
+        reference_path = (notebook_path.parent / unquote(reference_file)).resolve()
+        if not reference_path.is_file():
+            errors.append(f"Brand reference {reference_id} local file does not exist: {reference_file}")
+        elif brand_reference.get("reference_sha256") != sha256(reference_path):
+            errors.append(f"Brand reference {reference_id} SHA-256 does not match its file.")
     images = prompt_pack.get("images")
     if not isinstance(images, list):
         errors.append("Prompt pack images must be an array.")
@@ -343,6 +537,8 @@ def validate_prompt_pack(
             "density",
             "required_text",
             "source_locked_facts",
+            "research_source_ids",
+            "brand_reference_ids",
             "prompt",
             "negative_constraints",
             "output_file",
@@ -362,9 +558,31 @@ def validate_prompt_pack(
         for field in ("title", "purpose", "information_goal", "prompt", "output_file", "insertion_point"):
             if not isinstance(item.get(field), str) or not item.get(field, "").strip():
                 errors.append(f"Prompt-pack image {image_id} field {field} must be a non-empty string.")
-        for field in ("required_text", "source_locked_facts", "negative_constraints", "repairs"):
+        for field in (
+            "required_text",
+            "source_locked_facts",
+            "research_source_ids",
+            "brand_reference_ids",
+            "negative_constraints",
+            "repairs",
+        ):
             if not isinstance(item.get(field), list):
                 errors.append(f"Prompt-pack image {image_id} field {field} must be an array.")
+
+        image_research_ids = item.get("research_source_ids", [])
+        if isinstance(image_research_ids, list):
+            unknown_research_ids = set(image_research_ids) - research_state.get("source_ids", set())
+            if unknown_research_ids:
+                errors.append(
+                    f"Prompt-pack image {image_id} uses unknown research source IDs: {', '.join(sorted(unknown_research_ids))}"
+                )
+        image_brand_ids = item.get("brand_reference_ids", [])
+        if isinstance(image_brand_ids, list):
+            unknown_brand_ids = set(image_brand_ids) - brand_reference_ids
+            if unknown_brand_ids:
+                errors.append(
+                    f"Prompt-pack image {image_id} uses unknown brand reference IDs: {', '.join(sorted(unknown_brand_ids))}"
+                )
 
         density = item.get("density")
         if not isinstance(density, dict) or density.get("target") != "moderately_high":
@@ -380,6 +598,8 @@ def validate_prompt_pack(
         inspection = item.get("inspection")
         if not isinstance(inspection, dict) or any(inspection.get(field) != "passed" for field in INSPECTION_FIELDS):
             errors.append(f"Prompt-pack image {image_id} has incomplete acceptance inspection.")
+        if image_brand_ids and (not isinstance(inspection, dict) or inspection.get("brand_fidelity") != "passed"):
+            errors.append(f"Prompt-pack image {image_id} uses a brand reference but has no passed brand_fidelity inspection.")
 
         output_file = str(item.get("output_file", ""))
         output_files.add(output_file)
@@ -423,6 +643,7 @@ def validate(
     assets_dir: Path | None,
     manifest_path: Path | None = None,
     prompt_pack_path: Path | None = None,
+    research_sources_path: Path | None = None,
 ) -> dict[str, Any]:
     errors: list[str] = []
     warnings: list[str] = []
@@ -536,12 +757,45 @@ def validate(
     source = load_json(source_path, "Source notebook", errors) if source_path else None
     manifest = load_json(manifest_path, "Teaching manifest", errors) if manifest_path else None
     prompt_pack = load_json(prompt_pack_path, "Imagegen prompt pack", errors) if prompt_pack_path else None
+    research_sources = (
+        load_json(research_sources_path, "Technology research sources", errors) if research_sources_path else None
+    )
     manifest_state: dict[str, Any] = {}
+    research_state: dict[str, Any] = {
+        "technology_ids": set(),
+        "source_ids": set(),
+        "paddle_technology_ids": set(),
+        "technology_source_urls": {},
+    }
 
-    if source_path and manifest:
-        manifest_state = validate_manifest(manifest, source_path, notebook_path, errors, warnings)
+    if source_path and manifest and research_sources_path:
+        manifest_state = validate_manifest(
+            manifest, source_path, notebook_path, research_sources_path, errors, warnings
+        )
     elif source_path and not manifest_path:
         errors.append("Teaching manifest is required when validating against a source notebook.")
+    elif source_path and not research_sources_path:
+        errors.append("Technology research sources are required when validating against a source notebook.")
+
+    if research_sources:
+        research_state = validate_research_sources(research_sources, errors, warnings)
+        checks["technology_research"] = {
+            "technology_ids": sorted(research_state["technology_ids"]),
+            "source_ids": sorted(research_state["source_ids"]),
+            "paddle_technology_ids": sorted(research_state["paddle_technology_ids"]),
+        }
+        markdown_text = "\n".join(
+            source_text(cell) for cell in cells if isinstance(cell, dict) and cell.get("cell_type") == "markdown"
+        )
+        missing_citations = []
+        for technology_id, source_urls in research_state["technology_source_urls"].items():
+            if source_urls and not any(url in markdown_text for url in source_urls):
+                missing_citations.append(technology_id)
+        if missing_citations:
+            errors.append(
+                "Teaching notebook Markdown has no research-source link for technologies: "
+                + ", ".join(sorted(missing_citations))
+            )
 
     if source:
         checks["source_sha256"] = sha256(source_path)
@@ -552,7 +806,14 @@ def validate(
     if manifest and resolved_assets:
         if prompt_pack:
             checks["prompt_pack"] = validate_prompt_pack(
-                prompt_pack, manifest, manifest_state, notebook_path, resolved_assets, errors, warnings
+                prompt_pack,
+                manifest,
+                manifest_state,
+                research_state,
+                notebook_path,
+                resolved_assets,
+                errors,
+                warnings,
             )
         elif manifest.get("planned_images", 0):
             errors.append("Imagegen prompt pack is required when manifest planned_images is greater than zero.")
@@ -579,6 +840,7 @@ def main() -> int:
     parser.add_argument("--assets-dir", type=Path, required=True)
     parser.add_argument("--manifest", type=Path, required=True)
     parser.add_argument("--prompt-pack", type=Path, required=True)
+    parser.add_argument("--research-sources", type=Path, required=True)
     parser.add_argument("--report", type=Path)
     args = parser.parse_args()
 
@@ -588,6 +850,7 @@ def main() -> int:
         args.assets_dir.resolve(),
         args.manifest.resolve(),
         args.prompt_pack.resolve(),
+        args.research_sources.resolve(),
     )
     rendered = json.dumps(report, ensure_ascii=False, indent=2) + "\n"
     if args.report:
