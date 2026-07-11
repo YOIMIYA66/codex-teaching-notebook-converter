@@ -19,6 +19,9 @@
 - Paddle engineering prompt packs declare `paddle-engineering-atlas`, one shared series, a dark first hero, light body images, and one or more evidence inputs per image.
 - Project-file evidence resolves locally and matches its recorded SHA-256.
 - Every accepted Paddle engineering image passes profile, evidence, and series-consistency inspection.
+- Every image declares a prose-replacement contract covering at least two sections, three learning points, and an estimated 200+ characters.
+- Visualized sections use `summary_only` duplication policy and retain accessibility, citations, caveats, and copyable facts.
+- Every accepted prompt-pack image is referenced by notebook Markdown and its retained accessibility summary is present in the notebook.
 
 ## Optional Checks
 

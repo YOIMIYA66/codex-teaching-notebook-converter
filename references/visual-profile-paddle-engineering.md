@@ -84,6 +84,7 @@ When the user supplies an approved visual exemplar or contact sheet, save a proj
 - Prefer 1-2 short explanatory lines per region instead of paragraphs.
 - Use large primary numbers and compact secondary labels.
 - A learner should understand the image's main conclusion in 5 seconds and inspect supporting evidence in 30-60 seconds.
+- A body image should normally replace at least two fragmented teaching sections or roughly 200+ characters of text-first explanation.
 - If the image only restyles a short list, reroute it to HTML/table.
 - If labels become unreadable at normal notebook width, split the teaching question across two images.
 
@@ -109,3 +110,5 @@ Accept an image only when:
 - It is not so dense that labels or evidence thumbnails become unusable.
 
 Record `profile_fidelity: passed`, `evidence_fidelity: passed`, and `series_consistency: passed` in the image inspection block.
+
+Also record `prose_replacement: passed` after the image is inserted and duplicate Markdown has been compressed according to `visual-first-compression.md`.

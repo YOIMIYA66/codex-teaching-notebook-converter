@@ -46,6 +46,19 @@ Create `artifacts/teaching_imagegen_prompts.json` before final generation. Use t
       },
       "purpose": "Explain how data moves from input through validation and export.",
       "information_goal": "Replace the separate preprocessing, training, validation, and export explanations with one integrated visual.",
+      "prose_replacement": {
+        "sections_replaced": ["数据预处理", "LoRA 训练", "质量验证", "模型导出"],
+        "learning_points": [
+          "输入数据如何进入预处理",
+          "训练与验证门禁如何衔接",
+          "通过验证后生成哪些交付物"
+        ],
+        "estimated_replaced_characters": 560,
+        "replacement_ratio_target": 0.55,
+        "duplication_policy": "summary_only",
+        "retained_accessibility_summary": "该图展示数据从输入到训练、验证和导出的完整路径。",
+        "retained_copyable_items": ["运行命令", "模型路径", "来源链接"]
+      },
       "density": {
         "target": "moderately_high",
         "information_regions": 5,
@@ -85,6 +98,7 @@ Create `artifacts/teaching_imagegen_prompts.json` before final generation. Use t
         "profile_fidelity": "passed",
         "evidence_fidelity": "passed",
         "series_consistency": "passed",
+        "prose_replacement": "passed",
         "brand_fidelity": "passed"
       },
       "repairs": []
@@ -108,6 +122,7 @@ Source-locked technical facts that must not change: <models, frameworks, values,
 Research source IDs supporting technical claims: <stable IDs from teaching_research_sources.json>
 Evidence references: <real project images, artifacts, notebook facts, research IDs, and brand references supplied to this image>
 Purpose and information hierarchy: <what the learner should understand first, second, and third>
+Prose replacement: combine <two or more sections> and <three or more learning points>, replacing approximately <characters> while retaining only a concise accessibility summary, citations, and copyable facts in notebook text.
 Information density: moderately high, with <4-7> coherent regions and <12-24> short text items. The visual should replace substantial prose while remaining readable at normal notebook width.
 Visual profile: paddle-engineering-atlas. Use a 16:9 engineering teaching layout, grid-aligned panels, strong Chinese title hierarchy, real evidence, stable semantic colors, and one dominant reading path.
 Series position and theme: <position>/<total>, <dark_hero or light_body>.
@@ -126,7 +141,8 @@ Negative constraints: no gibberish, no misspellings, no invented values, no fake
 - Attach relevant local project images from `evidence_inputs` to the imagegen call. Use actual dataset thumbnails, charts, previews, and artifact screenshots instead of asking imagegen to invent equivalents.
 - Use one dark evidence-rich hero at series position 1 and light body diagrams for later positions.
 - Keep the same title hierarchy, panel grid, semantic colors, border treatment, and evidence style across the complete series.
+- Plan the image and surrounding Markdown together. After insertion, remove duplicated walkthrough paragraphs and bullet lists; keep only concise orientation, accessibility summary, citations, caveats, and copyable facts.
 - Keep citations and source links in notebook text. `research_source_ids` provide provenance for image claims but do not replace visible notebook citations.
 - Use one generation call per distinct image.
-- After acceptance, record the asset SHA-256 and mark the four standard inspection checks plus `profile_fidelity`, `evidence_fidelity`, and `series_consistency` as `passed`. Logo-bearing images also require `brand_fidelity: passed`.
+- After acceptance and notebook insertion, record the asset SHA-256 and mark the four standard inspection checks plus `profile_fidelity`, `evidence_fidelity`, `series_consistency`, and `prose_replacement` as `passed`. Logo-bearing images also require `brand_fidelity: passed`.
 - During iteration, `status` may be `planned` or `regenerated`. Before final validation it must be `accepted` or `repaired`.

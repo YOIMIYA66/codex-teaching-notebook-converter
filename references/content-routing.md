@@ -44,6 +44,8 @@ Technology-selection explanations usually start as a source-backed comparison ta
 
 When imagegen is selected, prefer a project-evidence-driven atlas, flow, principle, architecture, metric, or deliverables composition. Generic illustrations without real samples, artifacts, counts, or source-locked facts do not satisfy the Paddle engineering profile.
 
+Prefer imagegen when one visual can combine multiple fragmented teaching sections and materially reduce surrounding prose. If the image cannot replace at least two related sections or a substantial text explanation, use a smaller HTML/table treatment instead.
+
 ## Content Plan Contract
 
 Record every planned teaching element before generation:

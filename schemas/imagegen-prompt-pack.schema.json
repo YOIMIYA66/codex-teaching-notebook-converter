@@ -47,6 +47,7 @@
           "layout_contract",
           "purpose",
           "information_goal",
+          "prose_replacement",
           "density",
           "required_text",
           "source_locked_facts",
@@ -87,6 +88,39 @@
           },
           "purpose": {"type": "string", "minLength": 1},
           "information_goal": {"type": "string", "minLength": 1},
+          "prose_replacement": {
+            "type": "object",
+            "required": [
+              "sections_replaced",
+              "learning_points",
+              "estimated_replaced_characters",
+              "replacement_ratio_target",
+              "duplication_policy",
+              "retained_accessibility_summary",
+              "retained_copyable_items"
+            ],
+            "properties": {
+              "sections_replaced": {
+                "type": "array",
+                "minItems": 2,
+                "items": {"type": "string", "minLength": 1}
+              },
+              "learning_points": {
+                "type": "array",
+                "minItems": 3,
+                "items": {"type": "string", "minLength": 1}
+              },
+              "estimated_replaced_characters": {"type": "integer", "minimum": 200},
+              "replacement_ratio_target": {"type": "number", "minimum": 0.4, "maximum": 0.65},
+              "duplication_policy": {"const": "summary_only"},
+              "retained_accessibility_summary": {"type": "string", "minLength": 1},
+              "retained_copyable_items": {
+                "type": "array",
+                "minItems": 1,
+                "items": {"type": "string", "minLength": 1}
+              }
+            }
+          },
           "density": {
             "type": "object",
             "required": ["target", "information_regions", "text_items", "reading_path"],
@@ -133,6 +167,7 @@
               "profile_fidelity": {"const": "passed"},
               "evidence_fidelity": {"const": "passed"},
               "series_consistency": {"const": "passed"},
+              "prose_replacement": {"const": "passed"},
               "brand_fidelity": {"const": "passed"}
             },
             "additionalProperties": {"enum": ["passed"]}

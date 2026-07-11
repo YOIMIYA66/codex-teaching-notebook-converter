@@ -23,7 +23,12 @@ VALID_MODES = {"quick": (0, 2), "standard": (3, 5), "full": (6, 9)}
 VALID_RENDERING_METHODS = {"imagegen", "html_cards", "markdown_table", "markdown"}
 FINAL_IMAGE_STATUSES = {"accepted", "repaired"}
 INSPECTION_FIELDS = {"text_accuracy", "numeric_accuracy", "readability", "information_density"}
-PROFILE_INSPECTION_FIELDS = {"profile_fidelity", "evidence_fidelity", "series_consistency"}
+PROFILE_INSPECTION_FIELDS = {
+    "profile_fidelity",
+    "evidence_fidelity",
+    "series_consistency",
+    "prose_replacement",
+}
 SEMANTIC_COLOR_FIELDS = {
     "structure",
     "active_data",
@@ -469,6 +474,7 @@ def validate_prompt_pack(
     manifest_state: dict[str, Any],
     research_state: dict[str, Any],
     notebook_path: Path,
+    notebook_markdown: str,
     assets_dir: Path,
     errors: list[str],
     warnings: list[str],
@@ -560,6 +566,7 @@ def validate_prompt_pack(
             "layout_contract",
             "purpose",
             "information_goal",
+            "prose_replacement",
             "density",
             "required_text",
             "source_locked_facts",
@@ -622,6 +629,47 @@ def validate_prompt_pack(
                 errors.append(f"Prompt-pack image {image_id} layout has an invalid reading_path.")
             if layout.get("evidence_role") not in {"primary", "supporting"}:
                 errors.append(f"Prompt-pack image {image_id} layout has an invalid evidence_role.")
+
+        prose_replacement = item.get("prose_replacement")
+        if not isinstance(prose_replacement, dict):
+            errors.append(f"Prompt-pack image {image_id} prose_replacement must be an object.")
+        else:
+            sections = prose_replacement.get("sections_replaced")
+            learning_points = prose_replacement.get("learning_points")
+            replaced_characters = prose_replacement.get("estimated_replaced_characters")
+            replacement_ratio = prose_replacement.get("replacement_ratio_target")
+            retained_summary = prose_replacement.get("retained_accessibility_summary")
+            retained_items = prose_replacement.get("retained_copyable_items")
+            if (
+                not isinstance(sections, list)
+                or len(sections) < 2
+                or not all(isinstance(section, str) and section.strip() for section in sections)
+            ):
+                errors.append(f"Prompt-pack image {image_id} must replace at least two named sections.")
+            if (
+                not isinstance(learning_points, list)
+                or len(learning_points) < 3
+                or not all(isinstance(point, str) and point.strip() for point in learning_points)
+            ):
+                errors.append(f"Prompt-pack image {image_id} must cover at least three learning points.")
+            if not isinstance(replaced_characters, int) or replaced_characters < 200:
+                errors.append(f"Prompt-pack image {image_id} must replace an estimated 200 or more characters.")
+            if (
+                not isinstance(replacement_ratio, (int, float))
+                or isinstance(replacement_ratio, bool)
+                or not 0.4 <= replacement_ratio <= 0.65
+            ):
+                errors.append(f"Prompt-pack image {image_id} replacement_ratio_target must be between 0.4 and 0.65.")
+            if prose_replacement.get("duplication_policy") != "summary_only":
+                errors.append(f"Prompt-pack image {image_id} duplication_policy must be summary_only.")
+            if not isinstance(retained_summary, str) or not retained_summary.strip():
+                errors.append(f"Prompt-pack image {image_id} needs a retained accessibility summary.")
+            if (
+                not isinstance(retained_items, list)
+                or not retained_items
+                or not all(isinstance(value, str) and value.strip() for value in retained_items)
+            ):
+                errors.append(f"Prompt-pack image {image_id} must list retained copyable notebook items.")
 
         for field in ("title", "purpose", "information_goal", "prompt", "output_file", "insertion_point"):
             if not isinstance(item.get(field), str) or not item.get(field, "").strip():
@@ -710,6 +758,13 @@ def validate_prompt_pack(
 
         output_file = str(item.get("output_file", ""))
         output_files.add(output_file)
+        normalized_markdown = notebook_markdown.replace("\\", "/")
+        normalized_output = output_file.replace("\\", "/")
+        if normalized_output not in normalized_markdown:
+            errors.append(f"Accepted prompt-pack image {image_id} is not referenced from notebook Markdown.")
+        retained_summary = item.get("prose_replacement", {}).get("retained_accessibility_summary", "")
+        if isinstance(retained_summary, str) and retained_summary not in notebook_markdown:
+            errors.append(f"Prompt-pack image {image_id} retained accessibility summary is missing from notebook Markdown.")
         asset = (notebook_path.parent / unquote(output_file)).resolve()
         try:
             asset.relative_to(resolved_assets)
@@ -892,6 +947,9 @@ def validate(
         "paddle_technology_ids": set(),
         "technology_source_urls": {},
     }
+    notebook_markdown = "\n".join(
+        source_text(cell) for cell in cells if isinstance(cell, dict) and cell.get("cell_type") == "markdown"
+    )
 
     if source_path and manifest and research_sources_path:
         manifest_state = validate_manifest(
@@ -909,12 +967,9 @@ def validate(
             "source_ids": sorted(research_state["source_ids"]),
             "paddle_technology_ids": sorted(research_state["paddle_technology_ids"]),
         }
-        markdown_text = "\n".join(
-            source_text(cell) for cell in cells if isinstance(cell, dict) and cell.get("cell_type") == "markdown"
-        )
         missing_citations = []
         for technology_id, source_urls in research_state["technology_source_urls"].items():
-            if source_urls and not any(url in markdown_text for url in source_urls):
+            if source_urls and not any(url in notebook_markdown for url in source_urls):
                 missing_citations.append(technology_id)
         if missing_citations:
             errors.append(
@@ -936,6 +991,7 @@ def validate(
                 manifest_state,
                 research_state,
                 notebook_path,
+                notebook_markdown,
                 resolved_assets,
                 errors,
                 warnings,

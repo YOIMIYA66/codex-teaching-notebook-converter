@@ -30,6 +30,7 @@ Read only the references needed for the active conversion:
 - Read `references/content-routing.md` before deciding which material becomes imagegen, a table, cards, or Markdown.
 - Read `references/visual-policy.md` before planning or generating teaching images.
 - Read `references/visual-profile-paddle-engineering.md` before generating a Paddle engineering teaching-image series.
+- Read `references/visual-first-compression.md` before deciding how much explanatory prose remains after image insertion.
 - Read `references/prompt-contract.md` before writing the imagegen prompt pack.
 - Read `references/validation-rubric.md` before final validation and delivery.
 
@@ -65,6 +66,7 @@ Read only the references needed for the active conversion:
 6. Write the complete prompt pack.
    - Save it as `artifacts/teaching_imagegen_prompts.json` before final image generation.
    - Every planned image must include exact on-image text, source-locked facts, an information-density plan, a complete prompt, negative constraints, target filename, and insertion point.
+   - Every planned image must declare a prose-replacement contract: combined sections, learning points, estimated replaced characters, target reduction ratio, retained summary, and copyable items that remain in notebook text.
    - For Paddle engineering notebooks, use the `paddle-engineering-atlas` visual profile and record the real project evidence supplied to each image.
 
 7. Generate and inspect visuals.
@@ -80,6 +82,7 @@ Read only the references needed for the active conversion:
    - Add a source-backed technology-selection explanation for every major technology: why it was chosen, where it is advantageous, what constraints remain, and which alternatives were considered.
    - Use inline HTML styles for compact cards when cloud renderer compatibility is uncertain.
    - Keep exact metrics, commands, long paths, and dense tables in notebook text when they need to remain searchable and copyable, while still allowing the imagegen visual to display them.
+   - After inserting an accepted image, compress the corresponding Markdown. Remove duplicated walkthrough prose and repeated bullet lists; retain a concise takeaway, visible source links, exact commands/tables, high-stakes caveats, and accessible summary text.
 
 9. Validate and report.
    - Run `python scripts/validate_notebook.py <teaching.ipynb> --source <source.ipynb> --assets-dir artifacts/teaching_assets --manifest artifacts/teaching_manifest.json --prompt-pack artifacts/teaching_imagegen_prompts.json --research-sources artifacts/teaching_research_sources.json --report artifacts/teaching_validation.json`.
@@ -97,6 +100,7 @@ The conversion is complete only when:
 - Every major technology has a source-backed selection rationale covering fit, advantages, tradeoffs, alternatives, version context, and citations.
 - Every accepted teaching image is an inspected direct-use imagegen output stored locally.
 - Paddle engineering image series use consistent 16:9 composition, title hierarchy, semantic colors, real evidence, and series metadata defined by `paddle-engineering-atlas`.
+- Visualized sections do not repeat the full image narrative in Markdown. The image carries the integrated explanation while notebook text retains only concise orientation, citations, accessibility, and copyable facts.
 - Every Paddle logo-bearing generated image records an official reference asset and passes exact brand-fidelity inspection.
 - No sensitive source content was exposed to image generation.
 - The teaching notebook parses as JSON and all local image references resolve.

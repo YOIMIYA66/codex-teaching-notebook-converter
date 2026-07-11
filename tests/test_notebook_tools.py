@@ -142,6 +142,19 @@ class NotebookToolTests(unittest.TestCase):
                     },
                     "purpose": "Explain pipeline dependencies",
                     "information_goal": "Replace four separate stage explanations",
+                    "prose_replacement": {
+                        "sections_replaced": ["Data preparation", "Training and validation"],
+                        "learning_points": [
+                            "How input data enters the pipeline",
+                            "How training connects to validation",
+                            "Which artifacts are delivered",
+                        ],
+                        "estimated_replaced_characters": 420,
+                        "replacement_ratio_target": 0.55,
+                        "duplication_policy": "summary_only",
+                        "retained_accessibility_summary": "The image summarizes data, training, validation, and output flow.",
+                        "retained_copyable_items": ["Commands", "artifact paths", "source links"],
+                    },
                     "density": {
                         "target": "moderately_high",
                         "information_regions": 5,
@@ -174,12 +187,21 @@ class NotebookToolTests(unittest.TestCase):
                         "profile_fidelity": "passed",
                         "evidence_fidelity": "passed",
                         "series_consistency": "passed",
+                        "prose_replacement": "passed",
                     },
                     "repairs": [],
                 }
             )
             if brand:
                 images[0]["inspection"]["brand_fidelity"] = "passed"
+            teaching_data = json.loads(teaching.read_text(encoding="utf-8"))
+            for cell in teaching_data["cells"]:
+                if cell.get("id") == "m1":
+                    cell["source"] += (
+                        "\n\n![Flow](artifacts/teaching_assets/flow.png)\n\n"
+                        "The image summarizes data, training, validation, and output flow."
+                    )
+            teaching.write_text(json.dumps(teaching_data), encoding="utf-8")
 
         research = {
             "version": 1,
@@ -454,6 +476,19 @@ class NotebookToolTests(unittest.TestCase):
             report = validate_module.validate(teaching, source, assets, manifest, prompt, research)
             self.assertFalse(report["ok"])
             self.assertTrue(any("position 1 must use the dark_hero" in error for error in report["errors"]))
+
+    def test_visual_compression_requires_substantial_prose_replacement(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = self.write_notebook(root, "source.ipynb", [code("x = 1")])
+            teaching = self.write_notebook(root, "teaching.ipynb", [code("x = 1")])
+            assets, manifest, prompt, research = self.write_delivery(root, source, teaching, image=True)
+            prompt_data = json.loads(prompt.read_text(encoding="utf-8"))
+            prompt_data["images"][0]["prose_replacement"]["estimated_replaced_characters"] = 80
+            prompt.write_text(json.dumps(prompt_data), encoding="utf-8")
+            report = validate_module.validate(teaching, source, assets, manifest, prompt, research)
+            self.assertFalse(report["ok"])
+            self.assertTrue(any("200 or more characters" in error for error in report["errors"]))
 
 
 if __name__ == "__main__":
