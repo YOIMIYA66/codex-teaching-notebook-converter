@@ -51,6 +51,8 @@ skill 会优先选择满足任务的最小模式，用户明确指定时以用�
 - 默认图片策略：优先让 `imagegen` 直接生成包含文字的最终图，不再默认采用“先生成背景图，再本地合成文字”的做法。
 - 内容路由：只有流程、层级、依赖、因果、取舍和综合系统视图需要 imagegen。纯清单、通过/失败状态、指标网格、参数表、文件清单、哈希和交付路径优先使用 Markdown 表格或 inline HTML。
 - 信息密度：正文 imagegen 图通常包含 4 到 7 个信息区域、约 12 到 24 个短文本项，目标是替代多段说明文字，同时在 notebook 正常宽度下保持可读。
+- Paddle 工程图谱：默认使用 `paddle-engineering-atlas` profile，首图为深色证据型 hero，正文使用浅色工程图、统一网格和稳定语义色。
+- 真实证据：把项目中的数据样本、图表、混淆矩阵、预览图、目录结构、准确计数和实际文件作为 imagegen 输入，不让模型虚构替代品。
 - 文字准确性：把必须出现的中文标题、步骤、参数和警告语直接写进 imagegen prompt；如果文字错误或过小，减少文字量后重试。
 - 数量要求：完整模式必须规划 6 到 9 张可用图片；quick 和 standard 模式按 notebook 规模减少图片数量。
 - 完整模式核心类型：封面图、核心原理图、数据流程图；根据 notebook 内容再补充架构图、技术选型图和具有关系性的参数/实验图。简单质量门禁和交付物清单不作为 imagegen 图片。
@@ -60,6 +62,19 @@ skill 会优先选择满足任务的最小模式，用户明确指定时以用�
 - 图数量：通常 1 张首屏封面 + 5 到 8 张正文教学图。
 
 类似“一个标题 + 多条勾选项 + 一条禁止项”的质量门禁，不需要 imagegen。它没有需要视觉化的空间或因果关系，应使用 inline HTML 卡片或表格实现，从而保持文字精确、可搜索、可复制和便于更新。
+
+### Paddle Engineering Atlas
+
+Paddle 工程教学图片默认组织成一套连续的 16:9 系列：
+
+- 深色首图同时呈现真实对象/样本、核心数字、小型数据图谱和整体路线。
+- 浅色正文图分别解释数据图谱、数据流、分类/训练原理、运行架构、指标结果和交付关系。
+- 所有图片共享标题层级、面板网格、边框、箭头和语义颜色。
+- 蓝色表示结构与数据流，绿色表示正常/通过，红色表示缺陷/失败，橙色表示限制/警告，紫色用于次级类别。
+- 每张图必须记录真实 evidence input；本地证据文件同时记录 SHA-256。
+- 一张图只回答一个主要教学问题，但包含足够的样本、数字、路径和关系来替代多段文字。
+
+完整规范见 `references/visual-profile-paddle-engineering.md`。
 
 ## 技术选型研究
 
@@ -186,7 +201,7 @@ python .\scripts\validate_notebook.py .\source.teaching.ipynb `
   --report .\artifacts\teaching_validation.json
 ```
 
-验证器会根据 kernel 语言决定是否运行 Python AST 检查，并跳过 notebook magic、shell 单元和非 Python kernel。它还会核对 source hash、cell 变更披露、attachment、本地图片、内容路由、prompt pack、accepted 图片 SHA-256 和验收记录。静态验证不会自动执行 notebook；对于不可信、昂贵、依赖凭据或可能产生副作用的 notebook，必须先审查再执行。
+验证器会根据 kernel 语言决定是否运行 Python AST 检查，并跳过 notebook magic、shell 单元和非 Python kernel。它还会核对 source hash、cell 变更披露、attachment、本地图片、内容路由、研究来源、prompt pack、视觉 profile、series 顺序、真实 evidence、accepted 图片 SHA-256 和验收记录。静态验证不会自动执行 notebook；对于不可信、昂贵、依赖凭据或可能产生副作用的 notebook，必须先审查再执行。
 
 ## 产物结构
 

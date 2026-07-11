@@ -3,10 +3,23 @@
   "$id": "https://github.com/YOIMIYA66/codex-teaching-notebook-converter/schemas/imagegen-prompt-pack.schema.json",
   "title": "Teaching Notebook Imagegen Prompt Pack",
   "type": "object",
-  "required": ["version", "mode", "brand_references", "images"],
+  "required": ["version", "mode", "visual_profile", "semantic_color_map", "brand_references", "images"],
   "properties": {
     "version": {"const": 1},
     "mode": {"enum": ["quick", "standard", "full"]},
+    "visual_profile": {"const": "paddle-engineering-atlas"},
+    "semantic_color_map": {
+      "type": "object",
+      "required": ["structure", "active_data", "success_normal", "failure_defect", "warning_limitation", "secondary_class"],
+      "properties": {
+        "structure": {"type": "string", "minLength": 1},
+        "active_data": {"type": "string", "minLength": 1},
+        "success_normal": {"type": "string", "minLength": 1},
+        "failure_defect": {"type": "string", "minLength": 1},
+        "warning_limitation": {"type": "string", "minLength": 1},
+        "secondary_class": {"type": "string", "minLength": 1}
+      }
+    },
     "brand_references": {
       "type": "array",
       "items": {
@@ -30,6 +43,8 @@
         "required": [
           "id",
           "title",
+          "series",
+          "layout_contract",
           "purpose",
           "information_goal",
           "density",
@@ -37,6 +52,7 @@
           "source_locked_facts",
           "research_source_ids",
           "brand_reference_ids",
+          "evidence_inputs",
           "prompt",
           "negative_constraints",
           "output_file",
@@ -49,6 +65,26 @@
         "properties": {
           "id": {"type": "string", "minLength": 1},
           "title": {"type": "string", "minLength": 1},
+          "series": {
+            "type": "object",
+            "required": ["id", "position", "total", "theme"],
+            "properties": {
+              "id": {"type": "string", "minLength": 1},
+              "position": {"type": "integer", "minimum": 1},
+              "total": {"type": "integer", "minimum": 1, "maximum": 9},
+              "theme": {"enum": ["dark_hero", "light_body"]}
+            }
+          },
+          "layout_contract": {
+            "type": "object",
+            "required": ["canvas", "major_regions", "reading_path", "evidence_role"],
+            "properties": {
+              "canvas": {"const": "16:9"},
+              "major_regions": {"type": "integer", "minimum": 4, "maximum": 7},
+              "reading_path": {"enum": ["left_to_right", "top_to_bottom", "center_out"]},
+              "evidence_role": {"enum": ["primary", "supporting"]}
+            }
+          },
           "purpose": {"type": "string", "minLength": 1},
           "information_goal": {"type": "string", "minLength": 1},
           "density": {
@@ -65,6 +101,21 @@
           "source_locked_facts": {"type": "array", "items": {"type": "string"}},
           "research_source_ids": {"type": "array", "items": {"type": "string", "minLength": 1}},
           "brand_reference_ids": {"type": "array", "items": {"type": "string", "minLength": 1}},
+          "evidence_inputs": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["id", "source_type", "source_ref", "usage"],
+              "properties": {
+                "id": {"type": "string", "minLength": 1},
+                "source_type": {"enum": ["project_file", "notebook_fact", "research_source", "brand_reference"]},
+                "source_ref": {"type": "string", "minLength": 1},
+                "sha256": {"type": "string", "pattern": "^[a-fA-F0-9]{64}$"},
+                "usage": {"type": "string", "minLength": 1}
+              }
+            }
+          },
           "prompt": {"type": "string", "minLength": 1},
           "negative_constraints": {"type": "array", "minItems": 1, "items": {"type": "string"}},
           "output_file": {"type": "string", "minLength": 1},
@@ -79,6 +130,9 @@
               "numeric_accuracy": {"const": "passed"},
               "readability": {"const": "passed"},
               "information_density": {"const": "passed"},
+              "profile_fidelity": {"const": "passed"},
+              "evidence_fidelity": {"const": "passed"},
+              "series_consistency": {"const": "passed"},
               "brand_fidelity": {"const": "passed"}
             },
             "additionalProperties": {"enum": ["passed"]}

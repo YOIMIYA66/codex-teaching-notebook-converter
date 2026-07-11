@@ -29,6 +29,7 @@ Read only the references needed for the active conversion:
 - Read `references/technology-research.md` before explaining why a framework, model, library, deployment tool, or Paddle component was selected.
 - Read `references/content-routing.md` before deciding which material becomes imagegen, a table, cards, or Markdown.
 - Read `references/visual-policy.md` before planning or generating teaching images.
+- Read `references/visual-profile-paddle-engineering.md` before generating a Paddle engineering teaching-image series.
 - Read `references/prompt-contract.md` before writing the imagegen prompt pack.
 - Read `references/validation-rubric.md` before final validation and delivery.
 
@@ -64,10 +65,12 @@ Read only the references needed for the active conversion:
 6. Write the complete prompt pack.
    - Save it as `artifacts/teaching_imagegen_prompts.json` before final image generation.
    - Every planned image must include exact on-image text, source-locked facts, an information-density plan, a complete prompt, negative constraints, target filename, and insertion point.
+   - For Paddle engineering notebooks, use the `paddle-engineering-atlas` visual profile and record the real project evidence supplied to each image.
 
 7. Generate and inspect visuals.
    - Use one imagegen call per distinct teaching image.
    - Require imagegen to place the final required text directly in the bitmap.
+   - Supply relevant project-local evidence images or artifacts to imagegen whenever they exist. Generated dataset samples, metrics, defect examples, and file structures must not be invented when real evidence is available.
    - For Paddle logo-bearing visuals, provide an official Paddle logo asset as an image reference and require exact brand fidelity. Do not rely on a text-only request for an approximate logo.
    - Copy every accepted image into `artifacts/teaching_assets/` and reference only project-local files or notebook attachments.
    - Inspect multilingual text, numbers, model names, filenames, paths, and reading density before acceptance. Regenerate when source-locked content changes or the image is too sparse or too dense.
@@ -93,6 +96,7 @@ The conversion is complete only when:
 - The selected mode and image count are justified in the manifest.
 - Every major technology has a source-backed selection rationale covering fit, advantages, tradeoffs, alternatives, version context, and citations.
 - Every accepted teaching image is an inspected direct-use imagegen output stored locally.
+- Paddle engineering image series use consistent 16:9 composition, title hierarchy, semantic colors, real evidence, and series metadata defined by `paddle-engineering-atlas`.
 - Every Paddle logo-bearing generated image records an official reference asset and passes exact brand-fidelity inspection.
 - No sensitive source content was exposed to image generation.
 - The teaching notebook parses as JSON and all local image references resolve.

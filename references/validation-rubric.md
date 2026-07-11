@@ -16,6 +16,9 @@
 - Accepted prompt-pack entries record asset SHA-256 and passed text, numeric, readability, and density inspections.
 - Every material technology-selection claim maps to a research source, and every Paddle technology has at least one official Paddle source.
 - Paddle logo-bearing imagegen entries map to a hashed official reference asset and pass brand-fidelity inspection.
+- Paddle engineering prompt packs declare `paddle-engineering-atlas`, one shared series, a dark first hero, light body images, and one or more evidence inputs per image.
+- Project-file evidence resolves locally and matches its recorded SHA-256.
+- Every accepted Paddle engineering image passes profile, evidence, and series-consistency inspection.
 
 ## Optional Checks
 

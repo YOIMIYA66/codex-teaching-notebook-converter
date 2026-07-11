@@ -38,6 +38,8 @@ Every image must explain a distinct idea. A full conversion commonly uses:
 - Keep technology names, numeric values, metrics, filenames, and paths exactly source-locked.
 - Ban fake screenshots, browser chrome, placeholder panels, invented data, logos, and watermarks.
 
+For Paddle engineering teaching notebooks, apply `references/visual-profile-paddle-engineering.md`. This profile requires a coordinated image series with real evidence inputs, a dark evidence-rich hero, light body diagrams, stable semantic colors, and grid-aligned technical panels.
+
 ## Acceptance Gate
 
 Inspect each generated image before insertion. Reject or regenerate when:
@@ -48,6 +50,8 @@ Inspect each generated image before insertion. Reject or regenerate when:
 - The visual contains empty reserved areas or fake interface elements.
 - The image is too dense to read at normal notebook width.
 - The image is so sparse that a table, card group, or short Markdown section would communicate the same information more precisely.
+- Project evidence was available but the image replaced it with invented samples, fake charts, generic product imagery, or decorative placeholders.
+- The image breaks the declared series grid, semantic colors, title hierarchy, or evidence style.
 
 When too dense, regenerate with fewer groups, shorter labels, larger typography, and clearer hierarchy. When too sparse or list-like, reroute the content to HTML or a table instead of regenerating another bitmap. A deterministic local overlay may repair a small remaining defect only after imagegen has produced and been inspected as the primary visual. Record the repair in the prompt pack and validation report.
 

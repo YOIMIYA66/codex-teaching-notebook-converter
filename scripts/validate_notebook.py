@@ -23,6 +23,15 @@ VALID_MODES = {"quick": (0, 2), "standard": (3, 5), "full": (6, 9)}
 VALID_RENDERING_METHODS = {"imagegen", "html_cards", "markdown_table", "markdown"}
 FINAL_IMAGE_STATUSES = {"accepted", "repaired"}
 INSPECTION_FIELDS = {"text_accuracy", "numeric_accuracy", "readability", "information_density"}
+PROFILE_INSPECTION_FIELDS = {"profile_fidelity", "evidence_fidelity", "series_consistency"}
+SEMANTIC_COLOR_FIELDS = {
+    "structure",
+    "active_data",
+    "success_normal",
+    "failure_defect",
+    "warning_limitation",
+    "secondary_class",
+}
 SOURCE_TYPES = {
     "official_documentation",
     "official_repository",
@@ -468,6 +477,17 @@ def validate_prompt_pack(
         errors.append("Prompt pack version must be 1.")
     if prompt_pack.get("mode") != manifest.get("mode"):
         errors.append("Prompt pack mode does not match manifest mode.")
+    if prompt_pack.get("visual_profile") != "paddle-engineering-atlas":
+        errors.append("Prompt pack visual_profile must be paddle-engineering-atlas.")
+    semantic_color_map = prompt_pack.get("semantic_color_map")
+    if (
+        not isinstance(semantic_color_map, dict)
+        or any(
+            not isinstance(semantic_color_map.get(field), str) or not semantic_color_map.get(field, "").strip()
+            for field in SEMANTIC_COLOR_FIELDS
+        )
+    ):
+        errors.append("Prompt pack semantic_color_map must define all Paddle engineering semantic color roles.")
     brand_references = prompt_pack.get("brand_references")
     brand_reference_ids: set[str] = set()
     if not isinstance(brand_references, list):
@@ -512,6 +532,10 @@ def validate_prompt_pack(
 
     plan_methods = manifest_state.get("plan_methods", {})
     image_ids: set[str] = set()
+    series_ids: set[str] = set()
+    series_positions: set[int] = set()
+    series_totals: set[int] = set()
+    themes_by_position: dict[int, str] = {}
     accepted_assets = []
     output_files: set[str] = set()
     resolved_assets = assets_dir.resolve()
@@ -532,6 +556,8 @@ def validate_prompt_pack(
 
         required_fields = {
             "title",
+            "series",
+            "layout_contract",
             "purpose",
             "information_goal",
             "density",
@@ -539,6 +565,7 @@ def validate_prompt_pack(
             "source_locked_facts",
             "research_source_ids",
             "brand_reference_ids",
+            "evidence_inputs",
             "prompt",
             "negative_constraints",
             "output_file",
@@ -554,6 +581,47 @@ def validate_prompt_pack(
             continue
         if item.get("status") not in FINAL_IMAGE_STATUSES:
             errors.append(f"Prompt-pack image {image_id} is not in an accepted final status.")
+
+        series = item.get("series")
+        if not isinstance(series, dict):
+            errors.append(f"Prompt-pack image {image_id} series must be an object.")
+        else:
+            series_id = series.get("id")
+            position = series.get("position")
+            total = series.get("total")
+            theme = series.get("theme")
+            if not isinstance(series_id, str) or not series_id.strip():
+                errors.append(f"Prompt-pack image {image_id} series.id must be a non-empty string.")
+            else:
+                series_ids.add(series_id)
+            if not isinstance(position, int) or position < 1:
+                errors.append(f"Prompt-pack image {image_id} series.position must be a positive integer.")
+            else:
+                if position in series_positions:
+                    errors.append(f"Duplicate prompt-pack series position: {position}")
+                series_positions.add(position)
+                if isinstance(theme, str):
+                    themes_by_position[position] = theme
+            if not isinstance(total, int) or total < 1:
+                errors.append(f"Prompt-pack image {image_id} series.total must be a positive integer.")
+            else:
+                series_totals.add(total)
+            if theme not in {"dark_hero", "light_body"}:
+                errors.append(f"Prompt-pack image {image_id} series.theme must be dark_hero or light_body.")
+
+        layout = item.get("layout_contract")
+        if not isinstance(layout, dict):
+            errors.append(f"Prompt-pack image {image_id} layout_contract must be an object.")
+        else:
+            if layout.get("canvas") != "16:9":
+                errors.append(f"Prompt-pack image {image_id} layout canvas must be 16:9.")
+            regions = layout.get("major_regions")
+            if not isinstance(regions, int) or not 4 <= regions <= 7:
+                errors.append(f"Prompt-pack image {image_id} layout major_regions must be between 4 and 7.")
+            if layout.get("reading_path") not in {"left_to_right", "top_to_bottom", "center_out"}:
+                errors.append(f"Prompt-pack image {image_id} layout has an invalid reading_path.")
+            if layout.get("evidence_role") not in {"primary", "supporting"}:
+                errors.append(f"Prompt-pack image {image_id} layout has an invalid evidence_role.")
 
         for field in ("title", "purpose", "information_goal", "prompt", "output_file", "insertion_point"):
             if not isinstance(item.get(field), str) or not item.get(field, "").strip():
@@ -584,6 +652,41 @@ def validate_prompt_pack(
                     f"Prompt-pack image {image_id} uses unknown brand reference IDs: {', '.join(sorted(unknown_brand_ids))}"
                 )
 
+        evidence_inputs = item.get("evidence_inputs")
+        if not isinstance(evidence_inputs, list) or not evidence_inputs:
+            errors.append(f"Prompt-pack image {image_id} must contain at least one evidence input.")
+        else:
+            evidence_ids: set[str] = set()
+            for evidence_index, evidence in enumerate(evidence_inputs):
+                if not isinstance(evidence, dict):
+                    errors.append(f"Prompt-pack image {image_id} evidence_inputs[{evidence_index}] must be an object.")
+                    continue
+                evidence_id = str(evidence.get("id", ""))
+                source_type = evidence.get("source_type")
+                source_ref = str(evidence.get("source_ref", ""))
+                usage = evidence.get("usage")
+                if not evidence_id or evidence_id in evidence_ids:
+                    errors.append(f"Prompt-pack image {image_id} has a missing or duplicate evidence id: {evidence_id!r}")
+                evidence_ids.add(evidence_id)
+                if source_type not in {"project_file", "notebook_fact", "research_source", "brand_reference"}:
+                    errors.append(f"Prompt-pack image {image_id} evidence {evidence_id} has invalid source_type.")
+                if not source_ref:
+                    errors.append(f"Prompt-pack image {image_id} evidence {evidence_id} has no source_ref.")
+                if not isinstance(usage, str) or not usage.strip():
+                    errors.append(f"Prompt-pack image {image_id} evidence {evidence_id} has no usage explanation.")
+                if source_type == "project_file" and source_ref:
+                    evidence_path = (notebook_path.parent / unquote(source_ref)).resolve()
+                    if not evidence_path.is_file():
+                        errors.append(f"Prompt-pack image {image_id} evidence file does not exist: {source_ref}")
+                    elif evidence.get("sha256") != sha256(evidence_path):
+                        errors.append(f"Prompt-pack image {image_id} evidence {evidence_id} SHA-256 does not match.")
+                elif source_type == "notebook_fact" and not source_ref.startswith("notebook:"):
+                    errors.append(f"Prompt-pack image {image_id} notebook evidence {evidence_id} must use notebook:<reference>.")
+                elif source_type == "research_source" and source_ref not in research_state.get("source_ids", set()):
+                    errors.append(f"Prompt-pack image {image_id} evidence {evidence_id} uses an unknown research source.")
+                elif source_type == "brand_reference" and source_ref not in brand_reference_ids:
+                    errors.append(f"Prompt-pack image {image_id} evidence {evidence_id} uses an unknown brand reference.")
+
         density = item.get("density")
         if not isinstance(density, dict) or density.get("target") != "moderately_high":
             errors.append(f"Prompt-pack image {image_id} must declare density.target as moderately_high.")
@@ -598,6 +701,10 @@ def validate_prompt_pack(
         inspection = item.get("inspection")
         if not isinstance(inspection, dict) or any(inspection.get(field) != "passed" for field in INSPECTION_FIELDS):
             errors.append(f"Prompt-pack image {image_id} has incomplete acceptance inspection.")
+        if not isinstance(inspection, dict) or any(
+            inspection.get(field) != "passed" for field in PROFILE_INSPECTION_FIELDS
+        ):
+            errors.append(f"Prompt-pack image {image_id} has incomplete Paddle engineering profile inspection.")
         if image_brand_ids and (not isinstance(inspection, dict) or inspection.get("brand_fidelity") != "passed"):
             errors.append(f"Prompt-pack image {image_id} uses a brand reference but has no passed brand_fidelity inspection.")
 
@@ -619,6 +726,24 @@ def validate_prompt_pack(
         accepted_assets.append(str(asset.relative_to(resolved_assets)))
 
     planned_image_ids = {item_id for item_id, method in plan_methods.items() if method == "imagegen"}
+    if images:
+        expected_positions = set(range(1, len(images) + 1))
+        if len(series_ids) != 1:
+            errors.append("Prompt-pack images must share one series.id.")
+        if series_positions != expected_positions:
+            errors.append("Prompt-pack series positions must be unique and contiguous from 1 to image count.")
+        if series_totals != {len(images)}:
+            errors.append("Every prompt-pack series.total must equal the image count.")
+        if themes_by_position.get(1) != "dark_hero":
+            errors.append("Paddle engineering series position 1 must use the dark_hero theme.")
+        wrong_body_themes = [
+            position for position in range(2, len(images) + 1) if themes_by_position.get(position) != "light_body"
+        ]
+        if wrong_body_themes:
+            errors.append(
+                "Paddle engineering body images must use light_body theme at positions: "
+                + ", ".join(str(position) for position in wrong_body_themes)
+            )
     if planned_image_ids != image_ids:
         missing = sorted(planned_image_ids - image_ids)
         extra = sorted(image_ids - planned_image_ids)

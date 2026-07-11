@@ -128,6 +128,18 @@ class NotebookToolTests(unittest.TestCase):
                 {
                     "id": "flow",
                     "title": "Flow",
+                    "series": {
+                        "id": "fixture-series",
+                        "position": 1,
+                        "total": 1,
+                        "theme": "dark_hero",
+                    },
+                    "layout_contract": {
+                        "canvas": "16:9",
+                        "major_regions": 5,
+                        "reading_path": "left_to_right",
+                        "evidence_role": "primary",
+                    },
                     "purpose": "Explain pipeline dependencies",
                     "information_goal": "Replace four separate stage explanations",
                     "density": {
@@ -140,6 +152,14 @@ class NotebookToolTests(unittest.TestCase):
                     "source_locked_facts": ["model-v1"],
                     "research_source_ids": ["paddle-docs"],
                     "brand_reference_ids": brand_reference_ids,
+                    "evidence_inputs": [
+                        {
+                            "id": "notebook-counts",
+                            "source_type": "notebook_fact",
+                            "source_ref": "notebook:dataset-summary",
+                            "usage": "Lock dataset and result counts to notebook evidence",
+                        }
+                    ],
                     "prompt": "Create the final direct-use teaching infographic.",
                     "negative_constraints": ["no invented values"],
                     "output_file": output_file,
@@ -151,6 +171,9 @@ class NotebookToolTests(unittest.TestCase):
                         "numeric_accuracy": "passed",
                         "readability": "passed",
                         "information_density": "passed",
+                        "profile_fidelity": "passed",
+                        "evidence_fidelity": "passed",
+                        "series_consistency": "passed",
                     },
                     "repairs": [],
                 }
@@ -215,7 +238,23 @@ class NotebookToolTests(unittest.TestCase):
         research_path = artifacts / "teaching_research_sources.json"
         manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
         prompt_path.write_text(
-            json.dumps({"version": 1, "mode": "quick", "brand_references": brand_references, "images": images}),
+            json.dumps(
+                {
+                    "version": 1,
+                    "mode": "quick",
+                    "visual_profile": "paddle-engineering-atlas",
+                    "semantic_color_map": {
+                        "structure": "navy",
+                        "active_data": "blue_cyan",
+                        "success_normal": "green",
+                        "failure_defect": "red",
+                        "warning_limitation": "orange_amber",
+                        "secondary_class": "purple",
+                    },
+                    "brand_references": brand_references,
+                    "images": images,
+                }
+            ),
             encoding="utf-8",
         )
         research_path.write_text(json.dumps(research), encoding="utf-8")
@@ -389,6 +428,32 @@ class NotebookToolTests(unittest.TestCase):
             report = validate_module.validate(teaching, source, assets, manifest, prompt, research)
             self.assertFalse(report["ok"])
             self.assertTrue(any("no research-source link" in error for error in report["errors"]))
+
+    def test_paddle_profile_requires_evidence_input(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = self.write_notebook(root, "source.ipynb", [code("x = 1")])
+            teaching = self.write_notebook(root, "teaching.ipynb", [code("x = 1")])
+            assets, manifest, prompt, research = self.write_delivery(root, source, teaching, image=True)
+            prompt_data = json.loads(prompt.read_text(encoding="utf-8"))
+            prompt_data["images"][0]["evidence_inputs"] = []
+            prompt.write_text(json.dumps(prompt_data), encoding="utf-8")
+            report = validate_module.validate(teaching, source, assets, manifest, prompt, research)
+            self.assertFalse(report["ok"])
+            self.assertTrue(any("at least one evidence input" in error for error in report["errors"]))
+
+    def test_paddle_profile_requires_dark_first_hero(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = self.write_notebook(root, "source.ipynb", [code("x = 1")])
+            teaching = self.write_notebook(root, "teaching.ipynb", [code("x = 1")])
+            assets, manifest, prompt, research = self.write_delivery(root, source, teaching, image=True)
+            prompt_data = json.loads(prompt.read_text(encoding="utf-8"))
+            prompt_data["images"][0]["series"]["theme"] = "light_body"
+            prompt.write_text(json.dumps(prompt_data), encoding="utf-8")
+            report = validate_module.validate(teaching, source, assets, manifest, prompt, research)
+            self.assertFalse(report["ok"])
+            self.assertTrue(any("position 1 must use the dark_hero" in error for error in report["errors"]))
 
 
 if __name__ == "__main__":
