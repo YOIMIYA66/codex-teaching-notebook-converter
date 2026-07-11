@@ -53,12 +53,24 @@ The manifest should include:
   "mode": "standard",
   "mode_reason": "18 code cells across data, training, evaluation, and export",
   "planned_images": 4,
+  "content_plan": [
+    {
+      "id": "quality-gate",
+      "purpose": "Show exact release checks and prohibited fallback behavior",
+      "rendering_method": "html_cards",
+      "reason": "Exact checklist without spatial relationships",
+      "insertion_point": "## Quality gate"
+    }
+  ],
   "generated_assets": [],
   "inserted_cell_ids": [],
-  "modified_code_cell_ids": [],
+  "modified_code_cells": [],
+  "modified_source_cells": [],
   "execution_logic_modified": false
 }
 ```
+
+The machine-readable contract is `schemas/teaching-manifest.schema.json`. The validator uses equivalent standard-library checks so no JSON Schema dependency is required at runtime.
 
 ## Editing Rules
 
@@ -66,6 +78,7 @@ The manifest should include:
 - Insert explanatory Markdown around existing code rather than moving code unnecessarily.
 - Preserve code order, cell IDs, metadata, tags, outputs, attachments, and widgets.
 - When a code cell must change, record its cell ID and reason in the manifest.
+- For an older source notebook whose code cells have no IDs, preserve code order and use the synthetic disclosure ID `code-sequence` if the user explicitly requests a functional change.
 - Do not clear outputs by default. Existing outputs may be important evidence for the teaching narrative.
 - Keep notebook image references relative to the notebook location when possible.
 
@@ -81,6 +94,8 @@ A full conversion normally contains:
 6. Validation gates and failure modes.
 7. Limitations and high-stakes caveats where relevant.
 8. Deliverables and artifact locations.
+
+Route each element through `content-routing.md`. The structure above does not imply that every section needs an image. Exact list-like content should remain searchable HTML, tables, or Markdown.
 
 ## Execution Policy
 

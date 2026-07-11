@@ -1,4 +1,4 @@
 interface:
   display_name: "Teaching Notebook Converter"
-  short_description: "Turn existing notebooks into validated visual lessons."
-  default_prompt: "Convert this existing engineering notebook into a teaching copy. Preserve its executable workflow, select an appropriate quick, standard, or full mode, use imagegen for final direct-use text-bearing teaching visuals, add narrative guidance and inline HTML cards, and produce inspection, manifest, prompt-pack, and validation artifacts."
+  short_description: "Build validated, information-dense notebook lessons."
+  default_prompt: "Convert this existing engineering notebook into a teaching copy. Preserve its executable workflow, select an appropriate quick, standard, or full mode, and route each teaching element before rendering it. Use imagegen for moderately high-density direct-use visuals that explain processes, architecture, dependencies, causality, tradeoffs, or integrated system views. Use Markdown tables or inline HTML cards for exact checklists, status gates, metric grids, parameters, hashes, paths, and inventories. Produce inspection, manifest, prompt-pack, asset-hash, and validation artifacts."

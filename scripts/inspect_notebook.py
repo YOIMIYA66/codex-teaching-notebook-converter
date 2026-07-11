@@ -12,14 +12,14 @@ from typing import Any
 
 
 STAGE_PATTERNS = {
-    "setup": re.compile(r"\b(setup|install|environment|配置|安装|环境)\b", re.I),
-    "data": re.compile(r"\b(data|dataset|preprocess|load|数据|预处理|加载)\b", re.I),
-    "training": re.compile(r"\b(train|training|finetune|fine-tune|lora|训练|微调)\b", re.I),
-    "evaluation": re.compile(r"\b(eval|evaluation|metric|test|评估|指标|测试)\b", re.I),
-    "inference": re.compile(r"\b(infer|inference|predict|generate|推理|预测|生成)\b", re.I),
-    "validation": re.compile(r"\b(validate|validation|quality|gate|校验|验证|质量|门禁)\b", re.I),
-    "export": re.compile(r"\b(export|save|checkpoint|convert|导出|保存|转换)\b", re.I),
-    "packaging": re.compile(r"\b(package|manifest|zip|deliver|打包|清单|交付)\b", re.I),
+    "setup": re.compile(r"\b(?:setup|install|environment)\b|配置|安装|环境", re.I),
+    "data": re.compile(r"\b(?:data|dataset|preprocess|load)\b|数据|预处理|加载", re.I),
+    "training": re.compile(r"\b(?:train|training|finetune|fine-tune|lora)\b|训练|微调", re.I),
+    "evaluation": re.compile(r"\b(?:eval|evaluation|metric|test)\b|评估|指标|测试", re.I),
+    "inference": re.compile(r"\b(?:infer|inference|predict|generate)\b|推理|预测|生成", re.I),
+    "validation": re.compile(r"\b(?:validate|validation|quality|gate)\b|校验|验证|质量|门禁", re.I),
+    "export": re.compile(r"\b(?:export|save|checkpoint|convert)\b|导出|保存|转换", re.I),
+    "packaging": re.compile(r"\b(?:package|manifest|zip|deliver)\b|打包|清单|交付", re.I),
 }
 SECRET_PATTERN = re.compile(
     r"(?i)(api[_-]?key|access[_-]?token|secret|password|passwd)\s*[=:]\s*['\"][^'\"]+"
@@ -28,6 +28,7 @@ METRIC_PATTERN = re.compile(
     r"(?i)\b(accuracy|precision|recall|f1|loss|bleu|rouge|auc|perplexity)\b.{0,40}?(-?\d+(?:\.\d+)?)"
 )
 PATH_PATTERN = re.compile(r"(?:[A-Za-z]:\\[^\s'\"]+|/(?:home|Users|mnt|workspace)/[^\s'\"]+)")
+URL_PATTERN = re.compile(r"https?://[^\s<>\"']+", re.I)
 
 
 def source_text(cell: dict[str, Any]) -> str:
@@ -60,6 +61,7 @@ def inspect(path: Path) -> dict[str, Any]:
     stages: set[str] = set()
     metrics: list[dict[str, str]] = []
     absolute_paths: set[str] = set()
+    remote_urls: set[str] = set()
     secret_signals: list[dict[str, Any]] = []
     magic_cells: list[int] = []
     shell_cells: list[int] = []
@@ -95,6 +97,7 @@ def inspect(path: Path) -> dict[str, Any]:
             if item not in metrics:
                 metrics.append(item)
         absolute_paths.update(PATH_PATTERN.findall(text))
+        remote_urls.update(URL_PATTERN.findall(text))
         for match in SECRET_PATTERN.finditer(text):
             secret_signals.append({"cell": index, "kind": match.group(1)})
 
@@ -119,6 +122,7 @@ def inspect(path: Path) -> dict[str, Any]:
         "risk_signals": {
             "possible_secrets": secret_signals,
             "absolute_paths": sorted(absolute_paths),
+            "remote_urls": sorted(remote_urls),
             "requires_execution_review": bool(secret_signals or shell_cells or magic_cells),
         },
         "recommendation": {

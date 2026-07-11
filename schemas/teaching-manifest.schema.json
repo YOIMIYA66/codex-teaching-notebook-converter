@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/YOIMIYA66/codex-teaching-notebook-converter/schemas/teaching-manifest.schema.json",
+  "title": "Teaching Notebook Manifest",
+  "type": "object",
+  "required": [
+    "source_notebook",
+    "output_notebook",
+    "source_sha256",
+    "mode",
+    "mode_reason",
+    "planned_images",
+    "content_plan",
+    "generated_assets",
+    "inserted_cell_ids",
+    "modified_code_cells",
+    "modified_source_cells",
+    "execution_logic_modified"
+  ],
+  "properties": {
+    "source_notebook": {"type": "string", "minLength": 1},
+    "output_notebook": {"type": "string", "minLength": 1},
+    "source_sha256": {"type": "string", "pattern": "^[a-fA-F0-9]{64}$"},
+    "mode": {"enum": ["quick", "standard", "full"]},
+    "mode_reason": {"type": "string", "minLength": 1},
+    "planned_images": {"type": "integer", "minimum": 0, "maximum": 9},
+    "content_plan": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "purpose", "rendering_method", "reason", "insertion_point"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "purpose": {"type": "string", "minLength": 1},
+          "rendering_method": {"enum": ["imagegen", "html_cards", "markdown_table", "markdown"]},
+          "reason": {"type": "string", "minLength": 1},
+          "insertion_point": {"type": "string", "minLength": 1}
+        },
+        "additionalProperties": true
+      }
+    },
+    "generated_assets": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "inserted_cell_ids": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "modified_code_cells": {"$ref": "#/$defs/disclosures"},
+    "modified_source_cells": {"$ref": "#/$defs/disclosures"},
+    "execution_logic_modified": {"type": "boolean"}
+  },
+  "$defs": {
+    "disclosures": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["cell_id", "reason"],
+        "properties": {
+          "cell_id": {"type": "string", "minLength": 1},
+          "reason": {"type": "string", "minLength": 1}
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}

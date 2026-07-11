@@ -18,7 +18,8 @@ Codex 专用 skill：将工程化 Jupyter Notebook 转换成图文并茂、结�
 
 - 保留原工程 notebook 的可运行逻辑
 - 创建 `*.teaching.ipynb` 教学副本
-- 使用 `imagegen` 直接生成带文字、可直接插入 notebook 的教学信息图
+- 使用 `imagegen` 直接生成带有适中偏高信息密度、可取代大量说明文字的教学信息图
+- 先做内容路由：流程、架构、依赖和原理使用 imagegen；清单、状态矩阵、参数和证据列表使用表格或 inline HTML
 - 根据任务规模选择 quick、standard 或 full 模式；完整模式规划 6 到 9 张图片，默认目标为 8 张
 - 顶部添加 16:9 横版封面图，清楚展示项目特色、技术路线、亮点和成果
 - 正文使用白底浅色原理图、流程图、架构图、参数图、质量门禁图和交付物图
@@ -46,13 +47,17 @@ skill 会优先选择满足任务的最小模式，用户明确指定时以用�
 - 首屏：深色科技风 16:9 宣传海报，用来抓住主题和成果。
 - 正文：白底或浅蓝底 16:9 教学图，更适合 notebook 阅读。
 - 默认图片策略：优先让 `imagegen` 直接生成包含文字的最终图，不再默认采用“先生成背景图，再本地合成文字”的做法。
+- 内容路由：只有流程、层级、依赖、因果、取舍和综合系统视图需要 imagegen。纯清单、通过/失败状态、指标网格、参数表、文件清单、哈希和交付路径优先使用 Markdown 表格或 inline HTML。
+- 信息密度：正文 imagegen 图通常包含 4 到 7 个信息区域、约 12 到 24 个短文本项，目标是替代多段说明文字，同时在 notebook 正常宽度下保持可读。
 - 文字准确性：把必须出现的中文标题、步骤、参数和警告语直接写进 imagegen prompt；如果文字错误或过小，减少文字量后重试。
 - 数量要求：完整模式必须规划 6 到 9 张可用图片；quick 和 standard 模式按 notebook 规模减少图片数量。
-- 必选类型：封面图、核心原理图、数据流程图；根据 notebook 内容再补充架构图、技术选型图、参数/实验图、质量门禁图、交付物图。
+- 完整模式核心类型：封面图、核心原理图、数据流程图；根据 notebook 内容再补充架构图、技术选型图和具有关系性的参数/实验图。简单质量门禁和交付物清单不作为 imagegen 图片。
 - 逐页 prompt：每张图都必须写清页面必须包含的文字、完整 prompt、技术名和数字约束、负向约束、输出文件名和插入位置。
 - 禁止留空：prompt 中不要要求留白、占位、后期补字、伪截图或让 imagegen 自行补全数字。
 - 卡片：使用 inline `<div style="...">`，避免依赖全局 `<style>`。
 - 图数量：通常 1 张首屏封面 + 5 到 8 张正文教学图。
+
+类似“一个标题 + 多条勾选项 + 一条禁止项”的质量门禁，不需要 imagegen。它没有需要视觉化的空间或因果关系，应使用 inline HTML 卡片或表格实现，从而保持文字精确、可搜索、可复制和便于更新。
 
 推荐 imagegen prompt 思路：
 
@@ -153,10 +158,12 @@ python .\scripts\inspect_notebook.py .\source.ipynb --output .\artifacts\noteboo
 python .\scripts\validate_notebook.py .\source.teaching.ipynb `
   --source .\source.ipynb `
   --assets-dir .\artifacts\teaching_assets `
+  --manifest .\artifacts\teaching_manifest.json `
+  --prompt-pack .\artifacts\teaching_imagegen_prompts.json `
   --report .\artifacts\teaching_validation.json
 ```
 
-验证器会跳过 notebook magic 和 shell 单元的普通 Python AST 编译，同时把跳过原因写入报告。静态验证不会自动执行 notebook；对于不可信、昂贵、依赖凭据或可能产生副作用的 notebook，必须先审查再执行。
+验证器会根据 kernel 语言决定是否运行 Python AST 检查，并跳过 notebook magic、shell 单元和非 Python kernel。它还会核对 source hash、cell 变更披露、attachment、本地图片、内容路由、prompt pack、accepted 图片 SHA-256 和验收记录。静态验证不会自动执行 notebook；对于不可信、昂贵、依赖凭据或可能产生副作用的 notebook，必须先审查再执行。
 
 ## 产物结构
 
@@ -175,8 +182,8 @@ manifest 用于记录源文件哈希、转换模式、图片计划、插入的�
 
 1. 先读取原 notebook，识别数据、训练、推理、导出、交付阶段。
 2. 创建教学副本，保留原工程逻辑。
-3. 选择 quick、standard 或 full 模式，写出对应规模的视觉计划和逐页 imagegen prompt 包。
-4. 生成首屏封面、核心原理图、数据流程图、架构图、技术选型图、参数/实验图、质量门禁图和交付物图。
+3. 选择 quick、standard 或 full 模式，为每个教学元素指定 imagegen、HTML 卡片、Markdown 表格或普通 Markdown。
+4. 使用 imagegen 生成高信息密度的首屏、核心原理、数据流、架构、技术取舍和实验关系图；简单质量门禁与交付清单使用结构化 HTML 或表格。
 5. 加入教学讲解、路线图、成果卡和风险提示。
 6. 使用 inline HTML 卡片增强可读性。
 7. 校验 JSON、代码单元、图片引用、图片文字准确性和 HTML 预览。
@@ -195,6 +202,7 @@ manifest 用于记录源文件哈希、转换模式、图片计划、插入的�
 - `SKILL.md`
 - `agents/openai.yaml`
 - `references/*.md`
+- `schemas/*.schema.json`
 - `scripts/*.py`
 - `tests/test_notebook_tools.py`
 

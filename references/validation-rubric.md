@@ -12,6 +12,8 @@
 - Code-cell changes relative to the source are disclosed.
 - Prompt pack entries map to accepted local assets.
 - The manifest records selected mode, image count, inserted cells, and functional changes.
+- The manifest records a rendering method and reason for each planned teaching element.
+- Accepted prompt-pack entries record asset SHA-256 and passed text, numeric, readability, and density inspections.
 
 ## Optional Checks
 
@@ -22,7 +24,7 @@
 
 ## Severity
 
-- `error`: invalid JSON, missing asset, duplicate cell ID, undisclosed code change, or broken required reference.
+- `error`: invalid JSON, missing asset, missing attachment, duplicate cell ID, undisclosed source-cell change, invalid manifest or prompt pack, mismatched asset hash, or broken required reference.
 - `warning`: skipped syntax validation, absolute local path, remote asset, missing optional metadata, or unavailable renderer.
 - `info`: execution intentionally skipped, outputs preserved, or attachment embedding not used.
 
